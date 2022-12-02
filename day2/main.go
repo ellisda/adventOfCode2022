@@ -66,25 +66,6 @@ type hint struct {
 	result gameResult
 }
 
-// Score returns your myMove score plus 3 for a draw, 6 for a win, and 0 for a loss
-func (g game) Score() int {
-	winLossPoints := 0
-	switch {
-	case (g.mine == RockMe && g.them == ScissorsThem) ||
-		(g.mine == PaperMe && g.them == RockThem) ||
-		(g.mine == ScissorsMe && g.them == PaperThem):
-		winLossPoints = 6 //Win
-	case (g.mine == RockMe && g.them == RockThem) ||
-		(g.mine == PaperMe && g.them == PaperThem) ||
-		(g.mine == ScissorsMe && g.them == ScissorsThem):
-		winLossPoints = 3 //Draw
-	default:
-		winLossPoints = 0 //Loss
-	}
-
-	return g.mine.Score() + winLossPoints
-}
-
 // Game returns the game struct with moves to produce the hint's result
 func (h hint) Game() game {
 	g := game{
@@ -120,6 +101,25 @@ func (h hint) Game() game {
 		}
 	}
 	return g
+}
+
+// Score returns your myMove score plus 3 for a draw, 6 for a win, and 0 for a loss
+func (g game) Score() int {
+	winLossPoints := 0
+	switch {
+	case (g.mine == RockMe && g.them == ScissorsThem) ||
+		(g.mine == PaperMe && g.them == RockThem) ||
+		(g.mine == ScissorsMe && g.them == PaperThem):
+		winLossPoints = 6 //Win
+	case (g.mine == RockMe && g.them == RockThem) ||
+		(g.mine == PaperMe && g.them == PaperThem) ||
+		(g.mine == ScissorsMe && g.them == ScissorsThem):
+		winLossPoints = 3 //Draw
+	default:
+		winLossPoints = 0 //Loss
+	}
+
+	return g.mine.Score() + winLossPoints
 }
 
 // Score returns 1 when you throw Rock (X), 2 for Paper (Y), and 3 for Scissors (Z)
@@ -159,15 +159,15 @@ func (t theirMove) String() string {
 func parseInput(r io.Reader) []game {
 	ret := []game{}
 	for {
-		var theirs, mine string
-		n, err := fmt.Fscanln(r, &theirs, &mine)
+		g := game{}
+		n, err := fmt.Fscanln(r, &g.them, &g.mine)
 
 		// end of the line (EOF) or not
 		if n == 0 || err == io.EOF {
 			break
 		}
 
-		ret = append(ret, game{theirMove(theirs), myMove(mine)})
+		ret = append(ret, g)
 	}
 
 	return ret
@@ -176,15 +176,15 @@ func parseInput(r io.Reader) []game {
 func parseInput2(r io.Reader) []hint {
 	ret := []hint{}
 	for {
-		var theirs, mine string
-		n, err := fmt.Fscanln(r, &theirs, &mine)
+		h := hint{}
+		n, err := fmt.Fscanln(r, &h.them, &h.result)
 
 		// end of the line (EOF) or not
 		if n == 0 || err == io.EOF {
 			break
 		}
 
-		ret = append(ret, hint{theirMove(theirs), gameResult(mine)})
+		ret = append(ret, h)
 	}
 
 	return ret
