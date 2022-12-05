@@ -14,12 +14,14 @@ func main() {
 		panic(err)
 	}
 	stacks, moves := parseInput(f)
-	fmt.Println("stacks", stacks)
-	printStacks(stacks)
+	// fmt.Println("stacks", stacks)
+	// printStacks(stacks)
 
-	ProcessMoves9000(stacks, moves)
+	// ProcessMoves9000(stacks, moves)
 
 	ProcessMoves9001(stacks, moves)
+
+	// bernard()
 }
 
 type stack struct {
@@ -32,7 +34,7 @@ type move struct {
 	num     int
 }
 
-func ProcessMoves9000(in []stack, moves []move) {
+func ProcessMoves9000(in []*stack, moves []move) {
 	stacks := deepCopy(in)
 
 	for _, m := range moves {
@@ -43,13 +45,13 @@ func ProcessMoves9000(in []stack, moves []move) {
 		// printStacks(stacks)
 
 	}
-	fmt.Println("After")
-	printStacks(stacks)
+	// fmt.Println("After")
+	// printStacks(stacks)
 
 	fmt.Println("9000 Tops: ", GetTops(stacks))
 }
 
-func ProcessMoves9001(in []stack, moves []move) {
+func ProcessMoves9001(in []*stack, moves []move) {
 	stacks := deepCopy(in)
 
 	for _, m := range moves {
@@ -58,13 +60,13 @@ func ProcessMoves9001(in []stack, moves []move) {
 		// printStacks(stacks)
 
 	}
+	fmt.Println("9001 Tops: ", GetTops(stacks))
+
 	fmt.Println("After")
 	printStacks(stacks)
-
-	fmt.Println("9001 Tops: ", GetTops(stacks))
 }
 
-func ProcessMoves9001Bad(in []stack, moves []move) {
+func ProcessMoves9001Bad(in []*stack, moves []move) {
 	stacks := deepCopy(in)
 
 	for _, m := range moves {
@@ -80,15 +82,15 @@ func ProcessMoves9001Bad(in []stack, moves []move) {
 		// printStacks(stacks)
 
 	}
-	fmt.Println("After")
-	printStacks(stacks)
-	fmt.Println("9001 Tops: ", GetTops(stacks))
+	// fmt.Println("After")
+	// printStacks(stacks)
+	// fmt.Println("9001 Tops: ", GetTops(stacks))
 }
 
-func GetTops(stacks []stack) string {
+func GetTops(stacks []*stack) string {
 	ret := ""
 	for _, s := range stacks {
-		ret = ret + fmt.Sprintf("%c", s.Pop())
+		ret = ret + fmt.Sprintf("%c", s.Peek())
 	}
 	return ret
 }
@@ -121,7 +123,11 @@ func (s *stack) PopN(n int) []rune {
 	return r
 }
 
-func parseInput(r io.Reader) ([]stack, []move) {
+func (s *stack) Peek() rune {
+	return s.items[len(s.items)-1]
+}
+
+func parseInput(r io.Reader) ([]*stack, []move) {
 	//4--char colums, where we want values from index 1, 5, 9, etc.
 
 	lines := []string{}
@@ -137,11 +143,15 @@ func parseInput(r io.Reader) ([]stack, []move) {
 		lines = append(lines, line)
 	}
 
-	stacks := make([]stack, len(lines[0])/4+1)
+	stacks := make([]*stack, len(lines[0])/4+1)
+	for i := range stacks {
+		stacks[i] = &stack{}
+	}
+
 	for i := pictureAboveIdx - 2; i >= 0; i-- {
 		for col := 1; col < len(lines[i]); col += 4 {
 			if lines[i][col] != ' ' {
-				stack := &stacks[col/4]
+				stack := stacks[col/4]
 				stack.Push(rune(lines[i][col]))
 				// stacks[col/4] = stack
 			}
@@ -161,8 +171,9 @@ func parseInput(r io.Reader) ([]stack, []move) {
 
 }
 
-func deepCopy(in []stack) []stack {
-	ret := make([]stack, len(in))
+func deepCopy(in []*stack) []*stack {
+	ret := make([]*stack, len(in))
+
 	n := copy(ret, in)
 	if n < len(in) {
 		panic("failed to copy input")
@@ -170,9 +181,9 @@ func deepCopy(in []stack) []stack {
 	return ret
 }
 
-func printStacks(in []stack) {
+func printStacks(stacks []*stack) {
 	//Take a deep copy, so I can desctrutively Pop() items to print
-	stacks := deepCopy(in)
+	// stacks := deepCopy(in)
 	itemsLeft := 0
 	for _, s := range stacks {
 		if itemsLeft < s.Len() {
@@ -186,6 +197,7 @@ func printStacks(in []stack) {
 			if s.Len() == itemsLeft {
 
 				r := stacks[si].Pop()
+				// r := stacks[si].items[itemsLeft-1]
 				fmt.Printf("[%c] ", r)
 			} else {
 				fmt.Print("    ")
