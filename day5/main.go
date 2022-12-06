@@ -19,9 +19,20 @@ func main() {
 
 	// ProcessMoves9000(stacks, moves)
 
-	ProcessMoves9001(stacks, moves)
+	ProcessMoves9001_NonPointer(stacks, moves)
 
 	// bernard()
+
+	fmt.Println("Old Non-Ptr")
+	f.Seek(0, io.SeekStart)
+
+	stacks_old, moves_old := parseInput_old(f)
+
+	//DESIGN REVIEW - Bug comes from running 9000 and then 9001 - (print doesn't write into backing arrays)
+	//                Fix is to make deepcopy copy the actual rune arrays too
+	// printStacks_old(stacks_old)
+	ProcessMoves9000_Old(stacks_old, moves_old)
+	ProcessMoves9001_Old(stacks_old, moves_old)
 }
 
 type stack struct {
@@ -66,6 +77,18 @@ func ProcessMoves9001(in []*stack, moves []move) {
 	printStacks(stacks)
 }
 
+func ProcessMoves9001_NonPointer(in []*stack, moves []move) {
+	stacks := copyAsNonPtr(in)
+	for _, m := range moves {
+		stacks[m.toCol-1].PushN(stacks[m.fromCol-1].PopN(m.num))
+		// fmt.Printf("After move %d from %d to %d \n", m.num, m.fromCol, m.toCol)
+		// printStacks(stacks)
+
+	}
+	fmt.Println("9001 Tops (NON PTR): ", GetTopsNonPtr(stacks))
+
+}
+
 func ProcessMoves9001Bad(in []*stack, moves []move) {
 	stacks := deepCopy(in)
 
@@ -88,6 +111,14 @@ func ProcessMoves9001Bad(in []*stack, moves []move) {
 }
 
 func GetTops(stacks []*stack) string {
+	ret := ""
+	for _, s := range stacks {
+		ret = ret + fmt.Sprintf("%c", s.Peek())
+	}
+	return ret
+}
+
+func GetTopsNonPtr(stacks []stack) string {
 	ret := ""
 	for _, s := range stacks {
 		ret = ret + fmt.Sprintf("%c", s.Peek())
@@ -177,6 +208,15 @@ func deepCopy(in []*stack) []*stack {
 	n := copy(ret, in)
 	if n < len(in) {
 		panic("failed to copy input")
+	}
+	return ret
+}
+
+func copyAsNonPtr(in []*stack) []stack {
+	ret := make([]stack, len(in))
+
+	for i := range in {
+		ret[i] = *in[i]
 	}
 	return ret
 }
