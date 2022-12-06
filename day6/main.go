@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/samber/lo"
 )
 
 var (
@@ -46,7 +48,7 @@ func main() {
 
 func findStart(line string) int {
 	for i := 4; i < len(line); i++ {
-		if countUniqueChars(line[i-4:i]) == 4 {
+		if len(lo.Uniq([]rune(line[i-4:i]))) == 4 {
 			return i
 		}
 	}
@@ -55,18 +57,11 @@ func findStart(line string) int {
 
 func findStartPart2(line string) int {
 	for i := 14; i < len(line); i++ {
-		if countUniqueChars(line[i-14:i]) == 14 {
+		if len(lo.Uniq([]rune(line[i-14:i]))) == 14 {
 			return i
 		}
 	}
 	return -1
-}
-func countUniqueChars(str string) int {
-	m := make(map[rune]struct{})
-	for _, c := range str {
-		m[c] = struct{}{}
-	}
-	return len(m)
 }
 
 func parseInput(r io.Reader) []string {
