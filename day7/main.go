@@ -9,6 +9,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/samber/lo"
 )
 
 func main() {
@@ -20,23 +22,16 @@ func main() {
 	lines := parseInput(f)
 
 	t := buildTree(lines)
-	fmt.Println("tree", t)
 
 	dirTotals := make(map[string]int)
 	for k := range t {
 		tallyDirs(dirTotals, t, filepath.Dir(k))
 	}
-	sum := 0
-	for k, v := range dirTotals {
-		if v < 100000 {
-			sum += v
-			fmt.Println("Summing", v, k)
-		}
 
-	}
+	sum := lo.Sum(lo.Values(lo.PickBy(dirTotals, func(k string, v int) bool { return v < 100000 })))
 	fmt.Println("part 1", sum)
 
-	unused := 70000000 - sumDir(t, "/")
+	unused := 70000000 - lo.Sum(lo.Values(t))
 	needed := 30000000 - unused
 	fmt.Println("Part 2 Need", needed)
 	smallestAcceptable := math.MaxInt
@@ -48,10 +43,12 @@ func main() {
 	}
 }
 
-func tallyDirs(tally map[string]int, files map[string]int, leaf string) {
-	total := sumDir(files, leaf)
-	tally[leaf] = total
-	parent := filepath.Dir(leaf)
+func tallyDirs(tally map[string]int, files map[string]int, dirPath string) {
+	total := lo.Sum(lo.Values(lo.PickBy(files, func(k string, v int) bool {
+		return strings.HasPrefix(k, dirPath)
+	})))
+	tally[dirPath] = total
+	parent := filepath.Dir(dirPath)
 	if len(parent) > 2 {
 		tallyDirs(tally, files, parent)
 	}
@@ -84,17 +81,6 @@ func buildTree(lines []string) map[string]int {
 
 	}
 	return ret
-}
-
-func sumDir(tree map[string]int, dirPath string) int {
-	total := 0
-	for k, v := range tree {
-		if strings.HasPrefix(k, dirPath) {
-			total += v
-		}
-	}
-	fmt.Println("Sum", dirPath, total)
-	return total
 }
 
 func parseInput(r io.Reader) []string {
