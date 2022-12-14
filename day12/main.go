@@ -37,21 +37,21 @@ func main() {
 	}
 
 	grid, start, end := parseInput(f)
-	fmt.Println("start", start)
-	fmt.Println("end", end)
 
 	grid.PrintBoard()
 
+	fmt.Println("start", start)
+	fmt.Println("end", end)
 	// grid.ProcessSquare(start)
 
 	q := &moves{}
-	grid.WalkAndEnqueue(start, q)
+	grid.WalkAndEnqueueBackwards(end, q)
 	grid.DequeueAndBuildBacktrack(q)
 
 	fmt.Println("End", end, end.BackScore())
-	fmt.Print(countBackTrack(end))
+	fmt.Println(countBackTrack(start))
 
-	grid.PrintBacktrack(end)
+	grid.PrintBacktrack(start)
 
 }
 
@@ -84,7 +84,7 @@ func (s *square) BackScore() int {
 
 func (s *square) backScore(debug bool) int {
 	switch {
-	case s.elevation == Start:
+	case s.elevation == End:
 		return 0
 	case s.backTrack == nil:
 		return math.MaxInt
@@ -96,84 +96,16 @@ func (s *square) backScore(debug bool) int {
 	}
 }
 
-// func (g grid) WalkAll(start, end *square) {
-// 	//Seed the score at Start == 0
-// 	for _, row := range g {
-// 		for _, s := range row {
-// 			g.ProcessSquare(s)
-// 		}
-// 	}
-// }
-
-func (g grid) WalkAndEnqueue(here *square, q *moves) {
-	if here.elevation == End || here.visited {
+func (g grid) WalkAndEnqueueBackwards(here *square, q *moves) {
+	if here.elevation == Start || here.visited {
 		return
 	}
 	for _, candidate := range g.getCandidates(here) {
-		q.Enqueue(move{from: here, to: candidate})
+		if canDescend(here, candidate) {
+			q.Enqueue(move{from: here, to: candidate})
+		}
 	}
 
-}
-
-func (g grid) DequeueAndBuildBacktrack(q *moves) {
-	for m, ok := q.Dequeue(); ok; m, ok = q.Dequeue() {
-		here, candidate := m.from, m.to
-		// if here.x == 2 && here.y == 2 && candidate.x == 2 && candidate.y == 3 {
-		// 	fmt.Println("???  ", candidate, "from", here)
-		// }
-
-		if here.x == 2 && here.y == 1 && candidate.x == 2 && candidate.y == 2 {
-			fmt.Println("???  ", candidate, "from", here)
-		}
-
-		// if candidate.x == 2 && candidate.y == 3 {
-		// 	fmt.Println("crit move (before)", candidate.BackScore(), candidate, here)
-		// 	if here.x == 2 && here.y == 2 {
-		// 		fmt.Println("MAGIC")
-		// 	}
-		// }
-		if updateBackTrack(here, candidate) {
-			g.WalkAndEnqueue(candidate, q)
-			// g.updateBackScore(candidate)
-		}
-		// if candidate.x == 2 && candidate.y == 3 {
-		// 	fmt.Println("crit move (after)", candidate.BackScore(), candidate, here)
-		// }
-
-		here.visited = true
-	}
-}
-
-func (g grid) ProcessSquare(here *square) {
-	if here.elevation == End || here.visited {
-		return
-	}
-	for _, candidate := range g.getCandidates(here) {
-		// if here.x == 2 && here.y == 2 && candidate.x == 2 && candidate.y == 3 {
-		// 	fmt.Println("???  ", candidate, "from", here)
-		// }
-
-		if here.x == 2 && here.y == 1 && candidate.x == 2 && candidate.y == 2 {
-			fmt.Println("???  ", candidate, "from", here)
-		}
-
-		// if candidate.x == 2 && candidate.y == 3 {
-		// 	fmt.Println("crit move (before)", candidate.BackScore(), candidate, here)
-		// 	if here.x == 2 && here.y == 2 {
-		// 		fmt.Println("MAGIC")
-		// 	}
-		// }
-		if updateBackTrack(here, candidate) {
-			g.ProcessSquare(candidate)
-			// g.updateBackScore(candidate)
-		}
-		// if candidate.x == 2 && candidate.y == 3 {
-		// 	fmt.Println("crit move (after)", candidate.BackScore(), candidate, here)
-		// }
-
-	}
-
-	here.visited = true
 }
 
 func (g grid) getCandidates(here *square) []*square {
@@ -193,35 +125,89 @@ func (g grid) getCandidates(here *square) []*square {
 	return candidates
 }
 
-func updateBackTrack(here, candidate *square) bool {
-	if canHikeUp(here, candidate) { //&& here.BackScore()+1 <= candidate.BackScore() {
+func canDescend(here, candidate *square) bool {
+	switch {
+	case here.elevation == End:
+		return candidate.elevation == rune('z')
+
+	case candidate.elevation == Start:
+		return true
+
+	default:
+		// can only descend one level without gear
+		return here.elevation <= candidate.elevation+1
+	}
+}
+
+// func (g grid) WalkAndEnqueue(here *square, q *moves) {
+// 	if here.elevation == End || here.visited {
+// 		return
+// 	}
+// 	for _, candidate := range g.getCandidates(here) {
+// 		q.Enqueue(move{from: here, to: candidate})
+// 	}
+
+// }
+
+func (g grid) DequeueAndBuildBacktrack(q *moves) {
+	for m, ok := q.Dequeue(); ok; m, ok = q.Dequeue() {
+		here, candidate := m.from, m.to
 
 		// if here.x == 2 && here.y == 2 && candidate.x == 2 && candidate.y == 3 {
-		// if here.x == 2 && here.y == 1 && candidate.x == 2 && candidate.y == 2 {
-		// if here.x == 2 && here.y == 0 && candidate.x == 2 && candidate.y == 1 {
-		if //(here.x == 1 && here.y == 0 && candidate.x == 2 && candidate.y == 0) ||
-		here.x == 0 && here.y == 0 && candidate.x == 1 && candidate.y == 0 {
-			fmt.Println("Checking for Better Backtrack for ", candidate, "from", here)
-			fmt.Println("crit check")
-			fmt.Print("here Score: ", here)
-			h := here.backScore(true)
-			fmt.Println(" --- FINAL", h)
+		// 	fmt.Println("???  ", candidate, "from", here)
+		// }
 
-			fmt.Print("\ncanidate Score: ", candidate)
-			c := candidate.backScore(true)
-			fmt.Println(" --- FINAL", c)
+		if here.x == 2 && here.y == 1 && candidate.x == 2 && candidate.y == 2 {
+			fmt.Println("???  ", candidate, "from", here)
 		}
 
-		hScore := here.BackScore()
-		cScore := candidate.BackScore()
-		if hScore+1 < cScore {
-			//Found new best path to reach candidate
-			candidate.backTrack = here
-			// candidate.backScore = ScorePlusOne(here)
-
-			fmt.Println("New Best Backtrack for ", candidate, "from", here)
-			return true
+		// if candidate.x == 2 && candidate.y == 3 {
+		// 	fmt.Println("crit move (before)", candidate.BackScore(), candidate, here)
+		// 	if here.x == 2 && here.y == 2 {
+		// 		fmt.Println("MAGIC")
+		// 	}
+		// }
+		if updateBackTrack(here, candidate) {
+			if !candidate.visited {
+				g.WalkAndEnqueueBackwards(candidate, q)
+			}
+			// g.updateBackScore(candidate)
 		}
+		// if candidate.x == 2 && candidate.y == 3 {
+		// 	fmt.Println("crit move (after)", candidate.BackScore(), candidate, here)
+		// }
+
+		here.visited = true
+	}
+}
+
+func updateBackTrack(here, candidate *square) bool {
+
+	// if here.x == 2 && here.y == 2 && candidate.x == 2 && candidate.y == 3 {
+	// if here.x == 2 && here.y == 1 && candidate.x == 2 && candidate.y == 2 {
+	// if here.x == 2 && here.y == 0 && candidate.x == 2 && candidate.y == 1 {
+	// if //(here.x == 1 && here.y == 0 && candidate.x == 2 && candidate.y == 0) ||
+	// here.x == 0 && here.y == 0 && candidate.x == 1 && candidate.y == 0 {
+	// 	fmt.Println("Checking for Better Backtrack for ", candidate, "from", here)
+	// 	fmt.Println("crit check")
+	// 	fmt.Print("here Score: ", here)
+	// 	h := here.backScore(true)
+	// 	fmt.Println(" --- FINAL", h)
+
+	// 	fmt.Print("\ncanidate Score: ", candidate)
+	// 	c := candidate.backScore(true)
+	// 	fmt.Println(" --- FINAL", c)
+	// }
+
+	hScore := here.BackScore()
+	cScore := candidate.BackScore()
+	if hScore < cScore-1 {
+		//Found new best path to reach candidate
+		candidate.backTrack = here
+		// candidate.backScore = ScorePlusOne(here)
+
+		fmt.Println("New Best Backtrack for ", candidate, "from", here)
+		return true
 	}
 	return false
 }
@@ -315,22 +301,22 @@ func (g grid) GetForwardTrack(here *square) *square {
 func parseInput(f io.ReadSeekCloser) (ret grid, start *square, end *square) {
 	s := bufio.NewScanner(f)
 	s.Split(bufio.ScanLines)
-	i := 0
+	y := 0
 	for s.Scan() {
 		line := s.Text()
 		row := make([]*square, len(line))
 
-		for j, c := range line {
-			row[j] = &square{j, i, c, nil, false}
+		for x, c := range line {
+			row[x] = &square{x, y, c, nil, false}
 			switch c {
 			case Start:
-				start = row[j]
+				start = row[x]
 			case End:
-				end = row[j]
+				end = row[x]
 			}
 		}
 		ret = append(ret, row)
-		i++
+		y++
 	}
 
 	return
