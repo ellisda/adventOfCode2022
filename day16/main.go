@@ -29,7 +29,7 @@ type edge struct {
 }
 
 func main() {
-	f, err := os.Open("input2.txt")
+	f, err := os.Open("input.txt")
 	if err != nil {
 		panic(err)
 	}
@@ -81,7 +81,7 @@ func (g graph) WalkAll() int {
 	minutes := 30
 	t0 := time.Now()
 
-	g.recurse("", g[0], "", minutes, 0, g[0].valveName)
+	g.recurse(g[20], "", minutes, 0, g[20])
 
 	// g.Example(minutes, 0, "", bestMoves...)
 
@@ -137,7 +137,7 @@ func (g graph) Example(minutes int, score int, visited string, moves ...string) 
 
 }
 
-func (g graph) recurse(pre string, prev *node, valvesOpened string, minutes int, score int, at string) {
+func (g graph) recurse(prev *node, valvesOpened string, minutes int, score int, here *node) {
 	if maxMoves++; maxMoves > 900000000 {
 		fmt.Println("ABORT")
 		return
@@ -186,10 +186,9 @@ func (g graph) recurse(pre string, prev *node, valvesOpened string, minutes int,
 	// 	// g.recurse(pre+".", visited+">"+at, minutes-1, score, at[1:])
 	// } else {
 	// }
-	here := g.Get(at)
 
 	if here.flowRate > 0 && strings.Index(valvesOpened, "+"+here.valveName) == -1 {
-		g.recurse(pre+".", here, valvesOpened+">+"+here.valveName, minutes-1, score+((minutes-1)*here.flowRate), here.valveName)
+		g.recurse(here, valvesOpened+">+"+here.valveName, minutes-1, score+((minutes-1)*here.flowRate), here)
 		// fmt.Println(pre, minutes, "Got score ", rc0, "for opening valve", here.valveName, "before moving to", t, visited)
 	}
 
@@ -218,7 +217,7 @@ func (g graph) recurse(pre string, prev *node, valvesOpened string, minutes int,
 		// 	continue //Don't turn 180 and go back where you came from
 		// }
 
-		g.recurse(pre+".", here, valvesOpened, minutes-e.cost, score, e.dest.valveName)
+		g.recurse(here, valvesOpened, minutes-e.cost, score, e.dest)
 		// fmt.Println(pre, minutes, "Got score ", rc1, "for skipping valve", here.valveName, "before moving to", t, visited)
 		// best = max(rc1, best)
 
@@ -276,6 +275,7 @@ func parseInput(f io.ReadSeekCloser) graph {
 	// }
 
 	for _, n := range ret {
+		fmt.Println("Valve ", n.valveName, "flow", n.flowRate, "tunnels", n.tunnels)
 		for _, t := range n.tunnels {
 			dest := ret.Get(t)
 			e := ret.collapseEdge(n, dest)
@@ -288,7 +288,7 @@ func parseInput(f io.ReadSeekCloser) graph {
 }
 
 func (g graph) collapseEdge(src *node, dest *node) *edge {
-	if dest.flowRate == 0 && len(dest.tunnels) == 2 {
+	if false && dest.flowRate == 0 && len(dest.tunnels) == 2 {
 		var next *node
 		for i := 0; i < len(dest.tunnels); i++ {
 			if dest.tunnels[i] != src.valveName {
