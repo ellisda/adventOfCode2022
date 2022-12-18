@@ -173,7 +173,7 @@ func (g graph) recurse(pre string, visited string, minutes int, score int, at st
 	// }
 	here := g.Get(at)
 
-	if strings.Index(visited, "+"+here.valveName) == -1 {
+	if here.flowRate > 0 && strings.Index(visited, "+"+here.valveName) == -1 {
 		g.recurse(pre+".", visited+">+"+here.valveName, minutes-1, score+((minutes-1)*here.flowRate), here.valveName)
 		// fmt.Println(pre, minutes, "Got score ", rc0, "for opening valve", here.valveName, "before moving to", t, visited)
 	}
