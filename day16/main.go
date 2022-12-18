@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/samber/lo"
@@ -39,12 +40,27 @@ func (g graph) Get(valveName string) node {
 	panic("Can't find node" + valveName)
 }
 
+func (n *node) SortTunnels(g graph) {
+	sort.Slice(n.tunnels, func(i, j int) bool {
+		ni := g.Get(n.tunnels[i])
+		nj := g.Get(n.tunnels[j])
+		return ni.flowRate > nj.flowRate
+	})
+}
+
 func max(a, b int) int {
 	if a > b {
 		return a
 	} else {
 		return b
 	}
+}
+
+var bestMoves = []string{
+	"DD", "+DD", "CC", "BB", "+BB", "AA", "II", "JJ", "+JJ",
+	"II", "AA", "DD", "EE", "FF", "GG", "HH", "+HH",
+	"GG", "FF", "EE", "+EE", "DD", "CC", "+CC",
+	// "DD", "CC", "DD", "CC", "DD", "CC", "DD", "CC", //who cares about the last 6-8 here
 }
 
 func (g graph) WalkAll() int {
@@ -54,12 +70,9 @@ func (g graph) WalkAll() int {
 
 	minutes := 30
 
-	// g.recurse("", "", minutes, 0, g[0])
+	g.recurse("", ">"+g[0].valveName, minutes, 0, g[0].valveName)
 
-	g.Example(minutes, 0, "", "DD", "+DD", "CC", "BB", "+BB", "AA", "II", "JJ", "+JJ",
-		"II", "AA", "DD", "EE", "FF", "GG", "HH", "+HH",
-		"GG", "FF", "EE", "+EE", "DD", "CC", "+CC",
-		"DD", "CC", "DD", "CC", "DD", "CC", "DD", "CC")
+	// g.Example(minutes, 0, "", bestMoves...)
 
 	//try open n, try move through all tunnels that we've not aleady visited
 	// visited[n.valveName] = true
@@ -111,31 +124,78 @@ func (g graph) Example(minutes int, score int, visited string, moves ...string) 
 
 }
 
-func (g graph) recurse(pre string, visited string, minutes int, score int, here node) {
+func (g graph) recurse(pre string, visited string, minutes int, score int, at string) {
 	if maxMoves++; maxMoves > 900000000 {
 		return
 	}
 
 	if /*has(visited, "+"+here.valveName) ||*/ minutes < 2 {
-		key := visited + ">" + here.valveName
+		key := visited
 		ALL[key] = score
-		if score >= 1649 {
+		// if score >= 1649 {
 
-			fmt.Println(pre, minutes, "Final Score ", score, key)
-		}
+		// fmt.Println(pre, minutes, "Final Score ", score, key)
+		// }
 		return
+	}
+
+	if visited == ">AA>DD>+DD>CC>BB" {
+		fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
+	}
+	if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ" {
+		fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
+	}
+	if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II" {
+		fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
+	}
+	if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II>AA" {
+		fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
+	}
+	if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II>AA>DD" {
+		fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
+	}
+	if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II>AA>DD>EE>FF>GG>HH>+HH" {
+		fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
 	}
 
 	// best := 0
 	// visited = visited + ">" + here.valveName
 
+	// var here node
+	// if strings.HasPrefix(at, "+") {
+	// 	here = g.Get(at[1:])
+
+	// 	// minutes--
+	// 	// score += minutes * here.flowRate
+	// 	// // visited = visited+">+"+here.valveName
+	// 	// g.recurse(pre+".", visited+">"+at, minutes-1, score, at[1:])
+	// } else {
+	// }
+	here := g.Get(at)
+
+	if strings.Index(visited, "+"+here.valveName) == -1 {
+		g.recurse(pre+".", visited+">+"+here.valveName, minutes-1, score+((minutes-1)*here.flowRate), here.valveName)
+		// fmt.Println(pre, minutes, "Got score ", rc0, "for opening valve", here.valveName, "before moving to", t, visited)
+	}
+
 	for _, t := range here.tunnels {
-		nextHop := here.valveName + ">" + t
-		if strings.Index(visited, nextHop) != -1 {
+		//FIXME - Can't avoid walking an egde twice, have to allow ">AA>DD>...>+JJ>..>AA>DD"
+		// nextHop := here.valveName + ">" + t
+		// if strings.Index(visited, nextHop) != -1 {
+		// 	continue
+		// }
+		//FIXME - Avoiding backtracking at all is wrong, we need to allow ">II>JJ>+JJ>II"
+		// reverseHop := ">" + t + ">" + here.valveName
+		// if strings.Index(visited, reverseHop) != -1 {
+		// 	continue
+		// }
+		//Don't about-face if we didn't even open the here valve
+		reverseHop := ">" + t + ">" + here.valveName
+		if strings.HasSuffix(visited, reverseHop) {
 			continue
 		}
 
-		next := g.Get(t)
+		// next := g.Get(t)
 		// if t == "DD" {
 		// 	fmt.Print("HERE")
 		// }
@@ -143,12 +203,7 @@ func (g graph) recurse(pre string, visited string, minutes int, score int, here 
 		// 	continue //Don't turn 180 and go back where you came from
 		// }
 
-		if strings.Index(visited, "+"+here.valveName) == -1 {
-			g.recurse(pre+".", visited+">+"+here.valveName, minutes-2, score+(minutes-1)*here.flowRate, next)
-			// fmt.Println(pre, minutes, "Got score ", rc0, "for opening valve", here.valveName, "before moving to", t, visited)
-		}
-
-		g.recurse(pre+".", visited+">"+here.valveName, minutes-1, score, next)
+		g.recurse(pre+".", visited+">"+t, minutes-1, score, t)
 		// fmt.Println(pre, minutes, "Got score ", rc1, "for skipping valve", here.valveName, "before moving to", t, visited)
 		// best = max(rc1, best)
 
@@ -199,5 +254,11 @@ func parseInput(f io.ReadSeekCloser) graph {
 		n.tunnels = strings.Split(valves, ",")
 		ret = append(ret, n)
 	}
+
+	//Help the greedy
+	for _, v := range ret {
+		(&v).SortTunnels(ret)
+	}
+
 	return ret
 }
