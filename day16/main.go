@@ -8,16 +8,24 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/samber/lo"
 )
 
-type graph []node
+type graph []*node
 
 type node struct {
 	valveName string
 	flowRate  int
 	tunnels   []string
+	edges     []*edge
+}
+
+type edge struct {
+	cost int
+	src  *node
+	dest *node
 }
 
 func main() {
@@ -31,7 +39,7 @@ func main() {
 	fmt.Println("Best", g.WalkAll())
 }
 
-func (g graph) Get(valveName string) node {
+func (g graph) Get(valveName string) *node {
 	for _, n := range g {
 		if n.valveName == valveName {
 			return n
@@ -63,14 +71,17 @@ var bestMoves = []string{
 	// "DD", "CC", "DD", "CC", "DD", "CC", "DD", "CC", //who cares about the last 6-8 here
 }
 
+var bestYet int = 0
+
 func (g graph) WalkAll() int {
 	best := 0
 
 	// visited := make(map[string]bool)
 
 	minutes := 30
+	t0 := time.Now()
 
-	g.recurse("", ">"+g[0].valveName, minutes, 0, g[0].valveName)
+	g.recurse("", g[0], "", minutes, 0, g[0].valveName)
 
 	// g.Example(minutes, 0, "", bestMoves...)
 
@@ -82,7 +93,9 @@ func (g graph) WalkAll() int {
 	// 	best = max(best, g.recurse(minutes-1, g.Get(t)) //TODO: Come back to valve and open if enough time??
 	// }
 
+	fmt.Println("Runtime: ", time.Since(t0))
 	fmt.Println("Best: ", lo.Max(lo.Values(ALL)))
+	fmt.Println("Best int: ", bestYet)
 
 	return best
 
@@ -124,14 +137,16 @@ func (g graph) Example(minutes int, score int, visited string, moves ...string) 
 
 }
 
-func (g graph) recurse(pre string, visited string, minutes int, score int, at string) {
+func (g graph) recurse(pre string, prev *node, valvesOpened string, minutes int, score int, at string) {
 	if maxMoves++; maxMoves > 900000000 {
+		fmt.Println("ABORT")
 		return
 	}
 
 	if /*has(visited, "+"+here.valveName) ||*/ minutes < 2 {
-		key := visited
-		ALL[key] = score
+		// key := visited
+		// ALL[key] = score
+		bestYet = max(bestYet, score)
 		// if score >= 1649 {
 
 		// fmt.Println(pre, minutes, "Final Score ", score, key)
@@ -139,24 +154,24 @@ func (g graph) recurse(pre string, visited string, minutes int, score int, at st
 		return
 	}
 
-	if visited == ">AA>DD>+DD>CC>BB" {
-		fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
-	}
-	if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ" {
-		fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
-	}
-	if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II" {
-		fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
-	}
-	if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II>AA" {
-		fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
-	}
-	if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II>AA>DD" {
-		fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
-	}
-	if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II>AA>DD>EE>FF>GG>HH>+HH" {
-		fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
-	}
+	// if visited == ">AA>DD>+DD>CC>BB" {
+	// 	fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
+	// }
+	// if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ" {
+	// 	fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
+	// }
+	// if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II" {
+	// 	fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
+	// }
+	// if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II>AA" {
+	// 	fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
+	// }
+	// if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II>AA>DD" {
+	// 	fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
+	// }
+	// if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II>AA>DD>EE>FF>GG>HH>+HH" {
+	// 	fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
+	// }
 
 	// best := 0
 	// visited = visited + ">" + here.valveName
@@ -173,12 +188,12 @@ func (g graph) recurse(pre string, visited string, minutes int, score int, at st
 	// }
 	here := g.Get(at)
 
-	if here.flowRate > 0 && strings.Index(visited, "+"+here.valveName) == -1 {
-		g.recurse(pre+".", visited+">+"+here.valveName, minutes-1, score+((minutes-1)*here.flowRate), here.valveName)
+	if here.flowRate > 0 && strings.Index(valvesOpened, "+"+here.valveName) == -1 {
+		g.recurse(pre+".", here, valvesOpened+">+"+here.valveName, minutes-1, score+((minutes-1)*here.flowRate), here.valveName)
 		// fmt.Println(pre, minutes, "Got score ", rc0, "for opening valve", here.valveName, "before moving to", t, visited)
 	}
 
-	for _, t := range here.tunnels {
+	for _, e := range here.edges {
 		//FIXME - Can't avoid walking an egde twice, have to allow ">AA>DD>...>+JJ>..>AA>DD"
 		// nextHop := here.valveName + ">" + t
 		// if strings.Index(visited, nextHop) != -1 {
@@ -190,8 +205,8 @@ func (g graph) recurse(pre string, visited string, minutes int, score int, at st
 		// 	continue
 		// }
 		//Don't about-face if we didn't even open the here valve
-		reverseHop := ">" + t + ">" + here.valveName
-		if strings.HasSuffix(visited, reverseHop) {
+		// reverseHop := ">" + e.dest.valveName + ">" + here.valveName
+		if prev == e.dest { //strings.HasSuffix(visited, reverseHop) {
 			continue
 		}
 
@@ -203,7 +218,7 @@ func (g graph) recurse(pre string, visited string, minutes int, score int, at st
 		// 	continue //Don't turn 180 and go back where you came from
 		// }
 
-		g.recurse(pre+".", visited+">"+t, minutes-1, score, t)
+		g.recurse(pre+".", here, valvesOpened, minutes-e.cost, score, e.dest.valveName)
 		// fmt.Println(pre, minutes, "Got score ", rc1, "for skipping valve", here.valveName, "before moving to", t, visited)
 		// best = max(rc1, best)
 
@@ -238,10 +253,10 @@ func parseInput(f io.ReadSeekCloser) graph {
 	ret := graph{}
 	s := bufio.NewScanner(f)
 	s.Split(bufio.ScanLines)
-	n := node{}
 	for s.Scan() {
 
 		line := s.Text()
+		n := node{}
 		if i, err := fmt.Sscanf(line, "Valve %s has flow rate=%d", &n.valveName, &n.flowRate); i < 2 || err != nil {
 			log.Fatal("Parse fail - only got ", i, "values - err:", err)
 		}
@@ -252,13 +267,46 @@ func parseInput(f io.ReadSeekCloser) graph {
 		valves := strings.Join(splits[4:], "")
 
 		n.tunnels = strings.Split(valves, ",")
-		ret = append(ret, n)
+		ret = append(ret, &n)
 	}
 
 	//Help the greedy
-	for _, v := range ret {
-		(&v).SortTunnels(ret)
-	}
+	// for _, v := range ret {
+	// 	v.SortTunnels(ret)
+	// }
 
+	for _, n := range ret {
+		for _, t := range n.tunnels {
+			dest := ret.Get(t)
+			e := ret.collapseEdge(n, dest)
+			fmt.Println("Edge: ", e.src.valveName, e.dest.valveName, e.cost)
+
+			n.edges = append(n.edges, e)
+		}
+	}
 	return ret
+}
+
+func (g graph) collapseEdge(src *node, dest *node) *edge {
+	if dest.flowRate == 0 && len(dest.tunnels) == 2 {
+		var next *node
+		for i := 0; i < len(dest.tunnels); i++ {
+			if dest.tunnels[i] != src.valveName {
+				next = g.Get(dest.tunnels[i])
+			}
+		}
+		e := g.collapseEdge(dest, next)
+		ret := &edge{src: src,
+			dest: e.dest,
+			cost: e.cost + 1,
+		}
+		// fmt.Println("Collapsed Edge: ", e.src.valveName, e.dest.valveName, ret.cost)
+		return ret
+	} else {
+		return &edge{
+			src:  src,
+			dest: dest,
+			cost: 1,
+		}
+	}
 }
