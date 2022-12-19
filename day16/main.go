@@ -34,6 +34,7 @@ type move struct {
 }
 
 func main() {
+
 	f, err := os.Open("input.txt")
 	if err != nil {
 		panic(err)
@@ -145,7 +146,7 @@ func (g graph) Example(minutes int, score int, visited string, moves ...string) 
 }
 
 func (g graph) recurse(valvesOpened string, minutes int, score int, m, m2 move) {
-	if maxMoves++; maxMoves > 9000000000 {
+	if maxMoves++; maxMoves > 20000000000 {
 		fmt.Println("ABORT")
 		return
 	}
@@ -173,7 +174,8 @@ func (g graph) recurse(valvesOpened string, minutes int, score int, m, m2 move) 
 		if here.flowRate > 0 && strings.Index(valvesOpened, "+"+here.valveName) == -1 {
 			n := move{prev: here, here: here}
 
-			for _, e2 := range m2.here.edges {
+			for i := len(m2.here.edges) - 1; i >= 0; i-- { //_, e2 := range m2.here.edges {
+				e2 := m2.here.edges[i]
 				//Don't about-face if we didn't even open the here valve
 				if m2.prev == e2.dest {
 					continue
@@ -212,7 +214,9 @@ func (g graph) recurse(valvesOpened string, minutes int, score int, m, m2 move) 
 		}
 
 		n := move{prev: m.here, here: e.dest}
-		for _, e2 := range m2.here.edges {
+		for i := len(m2.here.edges) - 1; i >= 0; i-- { //_, e2 := range m2.here.edges {
+			e2 := m2.here.edges[i]
+
 			//Don't about-face if we didn't even open the here valve
 			if m2.prev == e2.dest {
 				continue
