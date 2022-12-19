@@ -16,6 +16,7 @@ import (
 type graph []*node
 
 type node struct {
+	index     int
 	valveName string
 	flowRate  int
 	tunnels   []string
@@ -41,7 +42,8 @@ func main() {
 	g := parseInput(f)
 	fmt.Println("nodes", g)
 
-	fmt.Println("Best", g.WalkAll())
+	fmt.Println("Part 1", g.Part1())
+	fmt.Println("Part 2", g.Part2())
 }
 
 func (g graph) Get(valveName string) *node {
@@ -69,40 +71,56 @@ func max(a, b int) int {
 	}
 }
 
-var bestMoves = []string{
-	"DD", "+DD", "CC", "BB", "+BB", "AA", "II", "JJ", "+JJ",
-	"II", "AA", "DD", "EE", "FF", "GG", "HH", "+HH",
-	"GG", "FF", "EE", "+EE", "DD", "CC", "+CC",
-	// "DD", "CC", "DD", "CC", "DD", "CC", "DD", "CC", //who cares about the last 6-8 here
-}
+var (
+	bestMoves = []string{
+		"DD", "+DD", "CC", "BB", "+BB", "AA", "II", "JJ", "+JJ",
+		"II", "AA", "DD", "EE", "FF", "GG", "HH", "+HH",
+		"GG", "FF", "EE", "+EE", "DD", "CC", "+CC",
+		// "DD", "CC", "DD", "CC", "DD", "CC", "DD", "CC", //who cares about the last 6-8 here
+	}
 
-var bestYet int = 0
+	bestYet int = 0
 
-func (g graph) WalkAll() int {
-	best := 0
+	ALL      map[string]int = make(map[string]int, 0)
+	All_ints map[int]int    = make(map[int]int, 0)
+	maxMoves int
+)
 
-	// visited := make(map[string]bool)
-
+func (g graph) Part1() int {
 	minutes := 30
 	t0 := time.Now()
 
 	start := g.Get("AA")
-
 	g.recurse("", minutes, 0, move{start, start}, move{start, start})
 
-	// g.Example(minutes, 0, "", bestMoves...)
+	fmt.Println("Runtime: ", time.Since(t0))
+	fmt.Println("Best Part1: ", lo.Max(lo.Values(ALL)))
+	fmt.Println("Best int: ", bestYet)
+	return bestYet
+}
 
-	//try open n, try move through all tunnels that we've not aleady visited
-	// visited[n.valveName] = true
+func (g graph) Part2() int {
 
-	// for _, t := range n.tunnels {
-	// 	best = max(best, (minutes-1)*n.flowRate + g.recurse(minutes-2, g.Get(t))
-	// 	best = max(best, g.recurse(minutes-1, g.Get(t)) //TODO: Come back to valve and open if enough time??
-	// }
+	bestYet = 0
+	ALL = make(map[string]int, 0)
+	All_ints = make(map[int]int, 0)
+
+	best := 0
+
+	//Only 26 minutes in part 2
+	minutes := 26
+	t0 := time.Now()
+
+	start := g.Get("AA")
+	g.recurse("", minutes, 0, move{start, start}, move{start, start})
 
 	fmt.Println("Runtime: ", time.Since(t0))
-	fmt.Println("Best: ", lo.Max(lo.Values(ALL)))
+	fmt.Println("Best Single Player: ", lo.Max(lo.Values(ALL)))
 	fmt.Println("Best int: ", bestYet)
+
+	p2 := bestPart2Faster(All_ints)
+	fmt.Println("Best Part2", p2)
+	fmt.Println("Runtime: ", time.Since(t0))
 
 	return best
 
@@ -116,9 +134,6 @@ func has(list string, s string) bool {
 	}
 	return false
 }
-
-var ALL map[string]int = make(map[string]int, 0)
-var maxMoves int
 
 func (g graph) Example(minutes int, score int, visited string, moves ...string) {
 
@@ -150,9 +165,22 @@ func (g graph) recurse(valvesOpened string, minutes int, score int, m, m2 move) 
 		return
 	}
 
+	if v, ok := ALL[valvesOpened]; !ok || score > v {
+		ALL[valvesOpened] = score
+
+		var key int = 0
+		for _, name := range strings.Split(valvesOpened, ">+")[1:] {
+			v := g.Get(name)
+			key |= 1 << v.index
+		}
+		if v2, ok2 := All_ints[key]; !ok2 || score > v2 {
+			All_ints[key] = score
+		}
+	}
+
 	if minutes < 2 {
 		// key := visited
-		// ALL[key] = score
+		// ALL[valvesOpened] = score
 		bestYet = max(bestYet, score)
 		// fmt.Println(pre, minutes, "Final Score ", score, key)
 		return
@@ -201,6 +229,38 @@ func (g graph) recurse(valvesOpened string, minutes int, score int, m, m2 move) 
 	}
 }
 
+func bestPart2(all map[string]int) int {
+	combinations := len(all) * len(all)
+	tenth := combinations / 100
+	fmt.Println("Scanning all combinations: ", combinations, "from individual answers", len(all))
+	best := 0
+	i := 0
+	for p1, v1 := range all {
+		for p2, v2 := range all {
+			if len(lo.Intersect(strings.Split(p1, ">+")[1:], strings.Split(p2, ">+")[1:])) == 0 {
+				best = max(best, v1+v2)
+			}
+			if i++; i%tenth == 0 {
+				fmt.Print(".")
+			}
+		}
+	}
+	return best
+}
+
+func bestPart2Faster(all map[int]int) int {
+	fmt.Println("Scanning all combinations from individual answers", len(all))
+	best := 0
+	for p1, v1 := range all {
+		for p2, v2 := range all {
+			if p1&p2 == 0 {
+				best = max(best, v1+v2)
+			}
+		}
+	}
+	return best
+}
+
 // func (g graph) recurse(pre string, visited map[string]bool, minutes int, here node) int {
 // 	if visited[here.valveName] {
 // 		return 0
@@ -229,6 +289,7 @@ func parseInput(f io.ReadSeekCloser) graph {
 	ret := graph{}
 	s := bufio.NewScanner(f)
 	s.Split(bufio.ScanLines)
+	found := 0
 	for s.Scan() {
 
 		line := s.Text()
@@ -237,6 +298,10 @@ func parseInput(f io.ReadSeekCloser) graph {
 			log.Fatal("Parse fail - only got ", i, "values - err:", err)
 		}
 
+		if n.flowRate > 0 {
+			found++
+			n.index = found
+		}
 		rightHalf := strings.Split(line, "; ")[1]
 		splits := strings.Split(rightHalf, " ")
 
@@ -252,7 +317,7 @@ func parseInput(f io.ReadSeekCloser) graph {
 	// }
 
 	for _, n := range ret {
-		fmt.Println("Valve ", n.valveName, "flow", n.flowRate, "tunnels", n.tunnels)
+		fmt.Println("Valve ", n.valveName, "index", n.index, "flow", n.flowRate, "tunnels", n.tunnels)
 		for _, t := range n.tunnels {
 			dest := ret.Get(t)
 			e := ret.collapseEdge(n, dest)
