@@ -28,6 +28,11 @@ type edge struct {
 	dest *node
 }
 
+type move struct {
+	here *node
+	prev *node
+}
+
 func main() {
 	f, err := os.Open("input.txt")
 	if err != nil {
@@ -81,7 +86,9 @@ func (g graph) WalkAll() int {
 	minutes := 30
 	t0 := time.Now()
 
-	g.recurse(g[20], "", minutes, 0, g[20])
+	start := g.Get("AA")
+
+	g.recurse("", minutes, 0, move{start, start}, move{start, start})
 
 	// g.Example(minutes, 0, "", bestMoves...)
 
@@ -137,90 +144,60 @@ func (g graph) Example(minutes int, score int, visited string, moves ...string) 
 
 }
 
-func (g graph) recurse(prev *node, valvesOpened string, minutes int, score int, here *node) {
-	if maxMoves++; maxMoves > 900000000 {
+func (g graph) recurse(valvesOpened string, minutes int, score int, m, m2 move) {
+	if maxMoves++; maxMoves > 2000000000 {
 		fmt.Println("ABORT")
 		return
 	}
 
-	if /*has(visited, "+"+here.valveName) ||*/ minutes < 2 {
+	if minutes < 2 {
 		// key := visited
 		// ALL[key] = score
 		bestYet = max(bestYet, score)
-		// if score >= 1649 {
-
 		// fmt.Println(pre, minutes, "Final Score ", score, key)
-		// }
 		return
 	}
 
-	// if visited == ">AA>DD>+DD>CC>BB" {
-	// 	fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
-	// }
-	// if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ" {
-	// 	fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
-	// }
-	// if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II" {
-	// 	fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
-	// }
-	// if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II>AA" {
-	// 	fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
-	// }
-	// if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II>AA>DD" {
-	// 	fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
-	// }
-	// if visited == ">AA>DD>+DD>CC>BB>+BB>AA>II>JJ>+JJ>II>AA>DD>EE>FF>GG>HH>+HH" {
-	// 	fmt.Println("On a good path (moves: ", maxMoves, ")", visited)
-	// }
-
-	// best := 0
-	// visited = visited + ">" + here.valveName
-
-	// var here node
-	// if strings.HasPrefix(at, "+") {
-	// 	here = g.Get(at[1:])
-
-	// 	// minutes--
-	// 	// score += minutes * here.flowRate
-	// 	// // visited = visited+">+"+here.valveName
-	// 	// g.recurse(pre+".", visited+">"+at, minutes-1, score, at[1:])
-	// } else {
-	// }
-
+	here := m.here
 	if here.flowRate > 0 && strings.Index(valvesOpened, "+"+here.valveName) == -1 {
-		g.recurse(here, valvesOpened+">+"+here.valveName, minutes-1, score+((minutes-1)*here.flowRate), here)
+		n := move{prev: here, here: here}
+
+		// for _, e2 := range m2.here.edges {
+		// 	//Don't about-face if we didn't even open the here valve
+		// 	if m2.prev == e2.dest {
+		// 		continue
+		// 	}
+
+		// 	n2 := move{prev: m2.here, here: e2.dest}
+
+		n2 := m2 //FIXME
+
+		g.recurse(valvesOpened+">+"+here.valveName, minutes-1, score+((minutes-1)*here.flowRate), n, n2)
+		// }
+
 		// fmt.Println(pre, minutes, "Got score ", rc0, "for opening valve", here.valveName, "before moving to", t, visited)
 	}
 
-	for _, e := range here.edges {
-		//FIXME - Can't avoid walking an egde twice, have to allow ">AA>DD>...>+JJ>..>AA>DD"
-		// nextHop := here.valveName + ">" + t
-		// if strings.Index(visited, nextHop) != -1 {
-		// 	continue
-		// }
-		//FIXME - Avoiding backtracking at all is wrong, we need to allow ">II>JJ>+JJ>II"
-		// reverseHop := ">" + t + ">" + here.valveName
-		// if strings.Index(visited, reverseHop) != -1 {
-		// 	continue
-		// }
+	for _, e := range m.here.edges {
 		//Don't about-face if we didn't even open the here valve
-		// reverseHop := ">" + e.dest.valveName + ">" + here.valveName
-		if prev == e.dest { //strings.HasSuffix(visited, reverseHop) {
+		if m.prev == e.dest {
 			continue
 		}
 
-		// next := g.Get(t)
-		// if t == "DD" {
-		// 	fmt.Print("HERE")
-		// }
-		// if len(visited) > 0 && strings.HasSuffix(visited, t+">"+here.valveName) {
-		// 	continue //Don't turn 180 and go back where you came from
-		// }
+		n := move{prev: m.here, here: e.dest}
+		// for _, e2 := range m2.here.edges {
+		// 	//Don't about-face if we didn't even open the here valve
+		// 	if m2.prev == e2.dest {
+		// 		continue
+		// 	}
 
-		g.recurse(here, valvesOpened, minutes-e.cost, score, e.dest)
+		// 	n2 := move{prev: m2.here, here: e2.dest}
+
+		n2 := m2 //FIXME
+
+		g.recurse(valvesOpened, minutes-1, score, n, n2)
 		// fmt.Println(pre, minutes, "Got score ", rc1, "for skipping valve", here.valveName, "before moving to", t, visited)
-		// best = max(rc1, best)
-
+		// }
 	}
 }
 
@@ -288,7 +265,7 @@ func parseInput(f io.ReadSeekCloser) graph {
 }
 
 func (g graph) collapseEdge(src *node, dest *node) *edge {
-	if false && dest.flowRate == 0 && len(dest.tunnels) == 2 {
+	/*if false && dest.flowRate == 0 && len(dest.tunnels) == 2 {
 		var next *node
 		for i := 0; i < len(dest.tunnels); i++ {
 			if dest.tunnels[i] != src.valveName {
@@ -302,7 +279,7 @@ func (g graph) collapseEdge(src *node, dest *node) *edge {
 		}
 		// fmt.Println("Collapsed Edge: ", e.src.valveName, e.dest.valveName, ret.cost)
 		return ret
-	} else {
+	} else */{
 		return &edge{
 			src:  src,
 			dest: dest,
