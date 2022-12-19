@@ -34,7 +34,6 @@ type move struct {
 }
 
 func main() {
-
 	f, err := os.Open("input.txt")
 	if err != nil {
 		panic(err)
@@ -89,7 +88,7 @@ func (g graph) WalkAll() int {
 
 	start := g.Get("AA")
 
-	g.recurse("", minutes-4, 0, move{start, start}, move{start, start})
+	g.recurse("", minutes, 0, move{start, start}, move{start, start})
 
 	// g.Example(minutes, 0, "", bestMoves...)
 
@@ -146,7 +145,7 @@ func (g graph) Example(minutes int, score int, visited string, moves ...string) 
 }
 
 func (g graph) recurse(valvesOpened string, minutes int, score int, m, m2 move) {
-	if maxMoves++; maxMoves > 20000000000 {
+	if maxMoves++; maxMoves > 2000000000 {
 		fmt.Println("ABORT")
 		return
 	}
@@ -159,54 +158,26 @@ func (g graph) recurse(valvesOpened string, minutes int, score int, m, m2 move) 
 		return
 	}
 
-	if m.here != m2.here &&
-		m.here.flowRate > 0 && strings.Index(valvesOpened, "+"+m.here.valveName) == -1 &&
-		m2.here.flowRate > 0 && strings.Index(valvesOpened, "+"+m2.here.valveName) == -1 {
-		n := move{prev: m.here, here: m.here}
-		n2 := move{prev: m2.here, here: m2.here}
+	here := m.here
+	if here.flowRate > 0 && strings.Index(valvesOpened, "+"+here.valveName) == -1 {
+		n := move{prev: here, here: here}
 
-		g.recurse(valvesOpened+">+"+m.here.valveName+">+"+m2.here.valveName,
-			minutes-1,
-			score+((minutes-1)*m.here.flowRate)+((minutes-1)*m2.here.flowRate),
-			n, n2)
-	} else {
-		here := m.here
-		if here.flowRate > 0 && strings.Index(valvesOpened, "+"+here.valveName) == -1 {
-			n := move{prev: here, here: here}
+		// for _, e2 := range m2.here.edges {
+		// 	//Don't about-face if we didn't even open the here valve
+		// 	if m2.prev == e2.dest {
+		// 		continue
+		// 	}
 
-			for i := len(m2.here.edges) - 1; i >= 0; i-- { //_, e2 := range m2.here.edges {
-				e2 := m2.here.edges[i]
-				//Don't about-face if we didn't even open the here valve
-				if m2.prev == e2.dest {
-					continue
-				}
+		// 	n2 := move{prev: m2.here, here: e2.dest}
 
-				n2 := move{prev: m2.here, here: e2.dest}
+		n2 := m2 //FIXME
 
-				g.recurse(valvesOpened+">+"+here.valveName, minutes-1, score+((minutes-1)*here.flowRate), n, n2)
-			}
+		g.recurse(valvesOpened+">+"+here.valveName, minutes-1, score+((minutes-1)*here.flowRate), n, n2)
+		// }
 
-			// fmt.Println(pre, minutes, "Got score ", rc0, "for opening valve", here.valveName, "before moving to", t, visited)
-		}
-
-		here = m2.here
-		if here.flowRate > 0 && strings.Index(valvesOpened, "+"+here.valveName) == -1 {
-			n2 := move{prev: here, here: here}
-
-			for _, e := range m.here.edges {
-				//Don't about-face if we didn't even open the here valve
-				if m.prev == e.dest {
-					continue
-				}
-
-				n := move{prev: m.here, here: e.dest}
-
-				g.recurse(valvesOpened+">+"+here.valveName, minutes-1, score+((minutes-1)*here.flowRate), n, n2)
-			}
-
-			// fmt.Println(pre, minutes, "Got score ", rc0, "for opening valve", here.valveName, "before moving to", t, visited)
-		}
+		// fmt.Println(pre, minutes, "Got score ", rc0, "for opening valve", here.valveName, "before moving to", t, visited)
 	}
+
 	for _, e := range m.here.edges {
 		//Don't about-face if we didn't even open the here valve
 		if m.prev == e.dest {
@@ -214,22 +185,19 @@ func (g graph) recurse(valvesOpened string, minutes int, score int, m, m2 move) 
 		}
 
 		n := move{prev: m.here, here: e.dest}
-		for i := len(m2.here.edges) - 1; i >= 0; i-- { //_, e2 := range m2.here.edges {
-			e2 := m2.here.edges[i]
+		// for _, e2 := range m2.here.edges {
+		// 	//Don't about-face if we didn't even open the here valve
+		// 	if m2.prev == e2.dest {
+		// 		continue
+		// 	}
 
-			//Don't about-face if we didn't even open the here valve
-			if m2.prev == e2.dest {
-				continue
-			}
+		// 	n2 := move{prev: m2.here, here: e2.dest}
 
-			n2 := move{prev: m2.here, here: e2.dest}
-			if n == n2 {
-				continue
-			}
+		n2 := m2 //FIXME
 
-			g.recurse(valvesOpened, minutes-1, score, n, n2)
-			// fmt.Println(pre, minutes, "Got score ", rc1, "for skipping valve", here.valveName, "before moving to", t, visited)
-		}
+		g.recurse(valvesOpened, minutes-1, score, n, n2)
+		// fmt.Println(pre, minutes, "Got score ", rc1, "for skipping valve", here.valveName, "before moving to", t, visited)
+		// }
 	}
 }
 
