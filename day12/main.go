@@ -21,6 +21,10 @@ type square struct {
 	visited bool
 }
 
+func (s square) String() string {
+	return fmt.Sprintf("[x: %d, y: %d] %c", s.x, s.y, s.elevation)
+}
+
 type grid [][]*square
 
 type move struct {
@@ -44,14 +48,31 @@ func main() {
 	fmt.Println("end", end)
 	// grid.ProcessSquare(start)
 
-	q := &moves{}
-	grid.WalkAndEnqueueBackwards(end, q)
-	grid.DequeueAndBuildBacktrack(q)
+	// fmt.Println("Shortest Part 1", grid.Shortest(start, end))
 
-	fmt.Println("End", end, end.BackScore())
-	fmt.Println(countBackTrack(start))
+	dfs := grid.dfs(start, needsGear)
+	fmt.Println("Forward Score", dfs[start.position()], "for End", end)
 
-	grid.PrintBacktrack(start)
+	dfs = grid.dfs(end, needsGearBackward)
+	fmt.Println("Backward Score", dfs[start.position()], "for Start", start)
+
+	minA := math.MaxInt
+	for k, v := range dfs {
+		if grid[k.y][k.x].elevation == 'a' && v <= minA {
+			minA = v
+			fmt.Println("Good start from", k, v)
+		}
+	}
+
+	bernard_main()
+	// q := &moves{}
+	// grid.WalkAndEnqueueBackwards(end, q)
+	// grid.DequeueAndBuildBacktrack(q)
+
+	// fmt.Println("End", end, end.BackScore())
+	// fmt.Println(countBackTrack(start))
+
+	// grid.PrintBacktrack(start)
 
 }
 
@@ -113,7 +134,7 @@ func (g grid) getCandidates(here *square) []*square {
 	if here.x-1 >= 0 {
 		candidates = append(candidates, g[here.y][here.x-1])
 	}
-	if here.x+1 < len(g[here.y]) {
+	if here.x+1 < len(g[0]) {
 		candidates = append(candidates, g[here.y][here.x+1])
 	}
 	if here.y+1 < len(g) {
@@ -311,8 +332,10 @@ func parseInput(f io.ReadSeekCloser) (ret grid, start *square, end *square) {
 			switch c {
 			case Start:
 				start = row[x]
+				start.elevation = 'a'
 			case End:
 				end = row[x]
+				end.elevation = 'z'
 			}
 		}
 		ret = append(ret, row)
