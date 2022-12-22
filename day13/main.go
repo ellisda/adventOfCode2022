@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -48,6 +49,21 @@ func main() {
 		}
 	}
 	fmt.Println("part1 sum", sum)
+
+	part2 := 1
+	sorted := sortPackets(lines, "[[2]]", "[[6]]")
+	for i, x := range sorted {
+		fmt.Println(i, x.print())
+		switch x.print() {
+		case "[[2]]":
+			fallthrough
+		case "[[6]]":
+			fmt.Println("found divisor at", i, x.print())
+			part2 *= (i + 1)
+		}
+	}
+
+	fmt.Println("Part2", part2)
 }
 
 func (n *node) print() string {
@@ -164,14 +180,6 @@ func treeCompare(left, right *node) int {
 		if temp != 0 {
 			return temp
 		}
-		// if left.children[i].value > right.children[i].value {
-		// 	fmt.Println("false")
-		// 	return OUTOFORDER
-		// }
-		// if left.children[i].value < right.children[i].value {
-		// 	fmt.Println("true")
-		// 	return INORDER
-		// }
 	}
 
 	if len(left.children) < len(right.children) {
@@ -179,12 +187,25 @@ func treeCompare(left, right *node) int {
 		return INORDER
 	}
 
-	// fmt.Println("true len", len(left.children), len(right.children))
-	// return INORDER
-
 	fmt.Println("neutral len", len(left.children), len(right.children))
 	return 0
 
+}
+
+func sortPackets(lines []string, dividers ...string) []*node {
+	numPairs := (len(lines) + 1) / 3
+	packets := make([]*node, 0, numPairs*2)
+	for i := 0; i < numPairs; i++ {
+		packets = append(packets, ParseTree2(lines[3*i]))
+		packets = append(packets, ParseTree2(lines[3*i+1]))
+	}
+	for _, d := range dividers {
+		packets = append(packets, ParseTree2(d))
+	}
+	// ret[i] = treeCompare(l, r) != OUTOFORDER
+
+	sort.Slice(packets, func(i, j int) bool { return treeCompare(packets[i], packets[j]) == INORDER })
+	return packets
 }
 
 func conv(in string, i int) int {
