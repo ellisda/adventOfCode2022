@@ -22,7 +22,8 @@ type position struct {
 }
 
 func main() {
-	file, _ := os.Open("input.txt")
+	in := "input.txt"
+	file, _ := os.Open(in)
 	defer file.Close()
 
 	input := []instruction{}
@@ -42,9 +43,16 @@ func main() {
 		fmt.Println(ins)
 	}
 
-	fmt.Println("Part1", countEmpties(2000000, input))
-	// fmt.Println("Part1", countEmpties(10, input))
+	if in == "input.txt" {
+		fmt.Println("Part1 (input.txt)", countEmpties(2000000, input))
+		fmt.Print("Part2 (input.txt)")
+		countEmptiesWithinRange(input, 0, 4000000)
 
+	} else {
+		fmt.Println("Part1 (input2.txt)", countEmpties(10, input))
+		fmt.Print("Part2 (input2.txt)")
+		countEmptiesWithinRange(input, 0, 20)
+	}
 }
 
 func countEmpties(row int, instrs []instruction) int {
@@ -83,4 +91,47 @@ func abs(a int) int {
 // distance returns the manhatten distance from the closest beacon
 func (i instruction) distance() int {
 	return abs(i.beacon.x-i.sensor.x) + abs(i.beacon.y-i.sensor.y)
+}
+
+func countEmptiesWithinRange(instrs []instruction, min, max int) {
+	for y := min; y <= max; y++ {
+		// fmt.Println("y", y)
+	GRID:
+		for x := min; x <= max; x++ {
+			for _, ins := range instrs {
+
+				//if position is closer than closest beacon, we can skip ahead till end of current sensor range
+				if d := ins.distanceFromSensor(x, y); d <= ins.distance() {
+					nextX := ins.getNextUnseenX(x, y)
+					// fmt.Println("ins", ins, "is", d, "from", x, y, "which is closer than it's beacon's dist", ins.distance())
+					// fmt.Println("ins", ins, "sees position", x, y, "next unseen x", nextX)
+
+					if nextX > 0 {
+						x = nextX - 1 //-1 to allow for-loop increment
+					}
+					continue GRID
+				}
+
+			}
+			fmt.Println("Found Empty at", x, y, "freq", 4000000*x+y)
+		}
+	}
+}
+
+func (i instruction) distanceFromSensor(targetX, targetY int) int {
+	return abs(targetX-i.sensor.x) + abs(targetY-i.sensor.y)
+}
+
+func (ins instruction) getNextUnseenX(x, y int) int {
+	y_dist := abs(y - ins.sensor.y)
+	x_Remain := ins.distance() - y_dist
+	if x_Remain <= 0 {
+		return -1
+	}
+	xLeftVis := ins.sensor.x - x_Remain
+	xRightVis := ins.sensor.x + x_Remain
+	if x >= xLeftVis && x <= xRightVis {
+		return xRightVis + 1
+	}
+	return -1
 }
