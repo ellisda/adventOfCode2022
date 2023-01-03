@@ -14,7 +14,7 @@ import (
 type circ interface {
 	Ints() []int
 	// Copy() interface{}
-	CycleOnce()
+	CycleN(int)
 	MoveItem(int)
 	Len() int
 	FindItemsFromZero(indices ...int) []int
@@ -41,12 +41,26 @@ func main() {
 	fmt.Println("Read len", len(c.Ints()))
 
 	// fmt.Println("Before dist - len", c.Len(), "dist", c.Distr())
-	c.CycleOnce()
+	c.CycleN(1)
 
 	// fmt.Println("After dist - len", c.Len(), "dist", c.Distr())
 
 	vals := c.FindItemsFromZero(1000, 2000, 3000)
 	fmt.Println("Part1", vals, "sum", lo.Sum(vals))
+
+	decrypted := lo.Map(nums, func(v int, _ int) int {
+		ret := v * 811589153
+		if (ret > 0) != (v > 0) {
+			panic("overflow")
+		}
+		return ret
+	})
+	c2 := NewCircular(decrypted)
+
+	c2.CycleN(10)
+
+	vals2 := c2.FindItemsFromZero(1000, 2000, 3000)
+	fmt.Println("Part2", vals2, "sum", lo.Sum(vals2))
 
 }
 

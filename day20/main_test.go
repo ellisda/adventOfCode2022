@@ -95,7 +95,7 @@ func TestMoveCycleOnce_Steps(t *testing.T) {
 func TestCycleOnce(t *testing.T) {
 	c := NewCircular(testInput)
 
-	c.CycleOnce()
+	c.CycleN(1)
 
 	assert.Equal(t, []int{
 		1, 2, -3, 4, 0, 3, -2,
@@ -126,7 +126,7 @@ func TestMoveAllTheWayAround_DoNothing(t *testing.T) {
 	c.MoveItem(1)
 	assert.Equal(t, input, c.Ints())
 
-	c.CycleOnce()
+	c.CycleN(1)
 	assert.Equal(t, input, c.Ints())
 }
 

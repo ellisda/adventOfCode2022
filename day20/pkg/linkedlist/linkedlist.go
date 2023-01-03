@@ -70,11 +70,13 @@ func (n *Node) Distr() map[int]int {
 }
 
 // CycleOnce returns a decrypted sequence
-func (n *Node) CycleOnce() {
+func (n *Node) CycleN(numTimes int) {
 	order := n.Order()
 
-	for _, c := range order {
-		c.MoveItem(0)
+	for i := 0; i < numTimes; i++ {
+		for _, c := range order {
+			c.MoveItem(0)
+		}
 	}
 }
 
