@@ -20,3 +20,10 @@ func TestStep(t *testing.T) {
 
 	assert.Equal(t, 12, s1.nextGeodes(&bp2, 24))
 }
+
+func TestCanMakeOne(t *testing.T) {
+	bp := blueprint{6, 4, 4, 3, 7, 4, 11}
+	s1 := state{oreRobot: 1, ore: 0, step: 0}
+
+	assert.Equal(t, 4, s1.nextGeodes(&bp, 24))
+}

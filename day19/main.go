@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 )
 
 type blueprint struct {
@@ -51,12 +52,18 @@ func main() {
 		bps = append(bps, bp)
 	}
 
+	w := sync.WaitGroup{}
+	w.Add(len(bps))
 	sum := 0
 	for _, bp := range bps {
-		s := bp.MaxGeodes(24)
-		sum += s * bp.id
-		fmt.Println("blueprint", bp, "best", s)
+		go func(bfunc blueprint) {
+			s := bfunc.MaxGeodes(24)
+			sum += s * bfunc.id
+			fmt.Println("blueprint", bfunc, "best", s)
+			w.Done()
+		}(bp)
 	}
+	w.Wait()
 	fmt.Println("Part1 Sum", sum)
 }
 
@@ -89,6 +96,7 @@ func (s state) nextGeodes(b *blueprint, maxSteps int) int {
 
 	ret := s.geode
 
+	//DESIGN REVIEW - Greedy here might build all Obsidian robots (i.e. if we need more ore for geode robot than obsidian)
 	switch {
 	case s.ore >= b.GeodeRobotCostsOre && s.obsidian >= b.GeodeRobotCostsObsidian:
 		buildGeoRobot := s
@@ -102,6 +110,8 @@ func (s state) nextGeodes(b *blueprint, maxSteps int) int {
 		ret = max(ret, buildGeoRobot.nextGeodes(b, maxSteps))
 
 	case s.ore >= b.ObsidianRobotCostsOre && s.clay >= b.ObsidianRobotCostsClay:
+		// &&
+		//(s.obsidianRobot == 0 || b.
 		buildObsRobot := s
 		buildObsRobot.ore -= b.ObsidianRobotCostsOre
 		buildObsRobot.clay -= b.ObsidianRobotCostsClay
@@ -125,13 +135,12 @@ func (s state) nextGeodes(b *blueprint, maxSteps int) int {
 			buildClayRobot.clayRobot++
 			ret = max(ret, buildClayRobot.nextGeodes(b, maxSteps))
 		}
+	}
+	{
+		cantBuildAny := s
+		cantBuildAny.MinutePassesCollect()
 
-		{
-			cantBuildAny := s
-			cantBuildAny.MinutePassesCollect()
-
-			ret = max(ret, cantBuildAny.nextGeodes(b, maxSteps))
-		}
+		ret = max(ret, cantBuildAny.nextGeodes(b, maxSteps))
 	}
 
 	return ret
