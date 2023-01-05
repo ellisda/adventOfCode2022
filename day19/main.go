@@ -34,7 +34,7 @@ type state struct {
 }
 
 func main() {
-	in := "input2.txt"
+	in := "input.txt"
 	file, _ := os.Open(in)
 	defer file.Close()
 
@@ -51,9 +51,13 @@ func main() {
 		bps = append(bps, bp)
 	}
 
+	sum := 0
 	for _, bp := range bps {
-		fmt.Println("blueprint", bp, "best", bp.MaxGeodes(23))
+		s := bp.MaxGeodes(24)
+		sum += s * bp.id
+		fmt.Println("blueprint", bp, "best", s)
 	}
+	fmt.Println("Part1 Sum", sum)
 }
 
 func (b blueprint) MaxGeodes(steps int) int {
@@ -69,54 +73,65 @@ func max(a, b int) int {
 	return a
 }
 
+func (s *state) MinutePassesCollect() {
+	s.ore += s.oreRobot
+	s.clay += s.clayRobot
+	s.obsidian += s.obsidianRobot
+	s.geode += s.geodeRobot
+	s.step++
+}
+
 // param is a pointer cause this is a hot path and less memory alloc
 func (s state) nextGeodes(b *blueprint, maxSteps int) int {
 	if s.step >= maxSteps {
 		return s.geode
 	}
 
-	s.ore += s.oreRobot
-	s.clay += s.clayRobot
-	s.obsidian += s.obsidianRobot
-	s.geode += s.geodeRobot
-	s.step++
 	ret := s.geode
 
-	if buildGeoRobot := s; buildGeoRobot.ore >= b.GeodeRobotCostsOre && buildGeoRobot.obsidian >= b.GeodeRobotCostsObsidian {
+	switch {
+	case s.ore >= b.GeodeRobotCostsOre && s.obsidian >= b.GeodeRobotCostsObsidian:
+		buildGeoRobot := s
 		buildGeoRobot.ore -= b.GeodeRobotCostsOre
 		buildGeoRobot.obsidian -= b.GeodeRobotCostsObsidian
+		buildGeoRobot.MinutePassesCollect()
 		buildGeoRobot.geodeRobot++
 
-		fmt.Println("Build Geo Robot", buildGeoRobot)
+		// fmt.Println("Build Geo Robot", buildGeoRobot)
 
 		ret = max(ret, buildGeoRobot.nextGeodes(b, maxSteps))
-	} else {
-		if buildObsRobot := s; buildObsRobot.ore >= b.ObsidianRobotCostsOre && buildObsRobot.clay >= b.ObsidianRobotCostsClay {
-			buildObsRobot.ore -= b.ObsidianRobotCostsOre
-			buildObsRobot.clay -= b.ObsidianRobotCostsClay
-			buildObsRobot.obsidianRobot++
-			ret = max(ret, buildObsRobot.nextGeodes(b, maxSteps))
-		} else {
-			if buildOreRobot := s; buildOreRobot.ore >= b.OreRobotCost {
-				buildOreRobot.ore -= b.OreRobotCost
-				buildOreRobot.oreRobot++
-				ret = max(ret, buildOreRobot.nextGeodes(b, maxSteps))
-			}
 
-			if buildClayRobot := s; buildClayRobot.ore >= b.ClayRobotCost {
-				buildClayRobot.ore -= b.ClayRobotCost
-				buildClayRobot.clayRobot++
-				ret = max(ret, buildClayRobot.nextGeodes(b, maxSteps))
-			}
+	case s.ore >= b.ObsidianRobotCostsOre && s.clay >= b.ObsidianRobotCostsClay:
+		buildObsRobot := s
+		buildObsRobot.ore -= b.ObsidianRobotCostsOre
+		buildObsRobot.clay -= b.ObsidianRobotCostsClay
+		buildObsRobot.MinutePassesCollect()
+		buildObsRobot.obsidianRobot++
+		ret = max(ret, buildObsRobot.nextGeodes(b, maxSteps))
 
-			if cantBuildAny := s; cantBuildAny.ore < b.OreRobotCost &&
-				cantBuildAny.ore < b.ObsidianRobotCostsOre &&
-				cantBuildAny.ore < b.GeodeRobotCostsOre &&
-				cantBuildAny.ore < b.ClayRobotCost {
-				ret = max(ret, cantBuildAny.nextGeodes(b, maxSteps))
-			}
+	default:
+		if s.ore >= b.OreRobotCost {
+			buildOreRobot := s
+			buildOreRobot.ore -= b.OreRobotCost
+			buildOreRobot.MinutePassesCollect()
+			buildOreRobot.oreRobot++
+			ret = max(ret, buildOreRobot.nextGeodes(b, maxSteps))
 		}
 
+		if s.ore >= b.ClayRobotCost {
+			buildClayRobot := s
+			buildClayRobot.ore -= b.ClayRobotCost
+			buildClayRobot.MinutePassesCollect()
+			buildClayRobot.clayRobot++
+			ret = max(ret, buildClayRobot.nextGeodes(b, maxSteps))
+		}
+
+		{
+			cantBuildAny := s
+			cantBuildAny.MinutePassesCollect()
+
+			ret = max(ret, cantBuildAny.nextGeodes(b, maxSteps))
+		}
 	}
 
 	return ret

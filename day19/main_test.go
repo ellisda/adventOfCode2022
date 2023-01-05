@@ -7,13 +7,16 @@ import (
 )
 
 func TestStep(t *testing.T) {
-	bp := blueprint{1, 4, 2, 3, 14, 2, 7}
+	bp1 := blueprint{1, 4, 2, 3, 14, 2, 7}
+	bp2 := blueprint{2, 2, 3, 3, 8, 3, 12}
+
+	s1 := state{oreRobot: 1, ore: 0, step: 0}
 
 	//After min 1
-	s1 := state{oreRobot: 1, ore: 0, step: 0}
-	g2 := s1.nextGeodes(&bp, 2)
+	g2 := s1.nextGeodes(&bp1, 2)
 	assert.Equal(t, 0, g2)
 
-	assert.Equal(t, 1, s1.nextGeodes(&bp, 24))
+	assert.Equal(t, 9, s1.nextGeodes(&bp1, 24))
 
+	assert.Equal(t, 12, s1.nextGeodes(&bp2, 24))
 }
