@@ -27,3 +27,16 @@ func TestCanMakeOne(t *testing.T) {
 
 	assert.Equal(t, 4, s1.nextGeodes(&bp, 24))
 }
+
+func TestPart2_partial(t *testing.T) {
+	bp1 := blueprint{1, 4, 2, 3, 14, 2, 7}
+
+	s1 := state{oreRobot: 1, ore: 0, step: 0}
+
+	// assert.Equal(t, 15, s1.nextGeodes(&bp1, 26))
+	// assert.Equal(t, 20, s1.nextGeodes(&bp1, 27))
+	// assert.Equal(t, 26, s1.nextGeodes(&bp1, 28))
+	// assert.Equal(t, 32, s1.nextGeodes(&bp1, 29))
+	assert.Equal(t, 39, s1.nextGeodes(&bp1, 30))
+
+}

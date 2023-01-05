@@ -35,7 +35,7 @@ type state struct {
 }
 
 func main() {
-	in := "input.txt"
+	in := "input2.txt"
 	file, _ := os.Open(in)
 	defer file.Close()
 
@@ -65,6 +65,8 @@ func main() {
 	}
 	w.Wait()
 	fmt.Println("Part1 Sum", sum)
+
+	fmt.Println("Part2", bps[0].MaxGeodes(32))
 }
 
 func (b blueprint) MaxGeodes(steps int) int {
@@ -96,9 +98,14 @@ func (s state) nextGeodes(b *blueprint, maxSteps int) int {
 
 	ret := s.geode
 
+	maxOrePerMin := max(max(max(b.GeodeRobotCostsOre, b.ObsidianRobotCostsOre), b.ClayRobotCost), b.OreRobotCost)
+	maxClayPerMin := b.ObsidianRobotCostsClay
+
+	hasEnoughClayRobots := float64(s.clayRobot)/float64(maxClayPerMin) >= 0.5
+
 	//DESIGN REVIEW - Greedy here might build all Obsidian robots (i.e. if we need more ore for geode robot than obsidian)
-	switch {
-	case s.ore >= b.GeodeRobotCostsOre && s.obsidian >= b.GeodeRobotCostsObsidian:
+	canBuildGeo := s.ore >= b.GeodeRobotCostsOre && s.obsidian >= b.GeodeRobotCostsObsidian
+	if canBuildGeo && hasEnoughClayRobots {
 		buildGeoRobot := s
 		buildGeoRobot.ore -= b.GeodeRobotCostsOre
 		buildGeoRobot.obsidian -= b.GeodeRobotCostsObsidian
@@ -108,8 +115,10 @@ func (s state) nextGeodes(b *blueprint, maxSteps int) int {
 		// fmt.Println("Build Geo Robot", buildGeoRobot)
 
 		ret = max(ret, buildGeoRobot.nextGeodes(b, maxSteps))
+	}
 
-	case s.ore >= b.ObsidianRobotCostsOre && s.clay >= b.ObsidianRobotCostsClay:
+	canBuildObs := s.ore >= b.ObsidianRobotCostsOre && s.clay >= b.ObsidianRobotCostsClay
+	if s.obsidianRobot < 20 && canBuildObs && hasEnoughClayRobots {
 		// &&
 		//(s.obsidianRobot == 0 || b.
 		buildObsRobot := s
@@ -118,9 +127,14 @@ func (s state) nextGeodes(b *blueprint, maxSteps int) int {
 		buildObsRobot.MinutePassesCollect()
 		buildObsRobot.obsidianRobot++
 		ret = max(ret, buildObsRobot.nextGeodes(b, maxSteps))
+	}
 
-	default:
-		if s.ore >= b.OreRobotCost {
+	if !canBuildGeo { //&& !canBuildObs
+		// clayNeeded := b.GeodeRobotCostsObsidian * b.ObsidianRobotCostsClay
+		// oreNeeded := b.GeodeRobotCostsOre
+
+		//None of the robots requries more than 4 ore, so we never need to be mining ore faster then 4/min
+		if s.oreRobot < maxOrePerMin && s.ore >= b.OreRobotCost {
 			buildOreRobot := s
 			buildOreRobot.ore -= b.OreRobotCost
 			buildOreRobot.MinutePassesCollect()
@@ -128,7 +142,8 @@ func (s state) nextGeodes(b *blueprint, maxSteps int) int {
 			ret = max(ret, buildOreRobot.nextGeodes(b, maxSteps))
 		}
 
-		if s.ore >= b.ClayRobotCost {
+		//None of the robots requires more than 20 clay, so we never need to be mining ore faster than 20/min
+		if s.clayRobot < maxClayPerMin && s.ore >= b.ClayRobotCost {
 			buildClayRobot := s
 			buildClayRobot.ore -= b.ClayRobotCost
 			buildClayRobot.MinutePassesCollect()
@@ -136,7 +151,9 @@ func (s state) nextGeodes(b *blueprint, maxSteps int) int {
 			ret = max(ret, buildClayRobot.nextGeodes(b, maxSteps))
 		}
 	}
-	{
+
+	if s.ore < b.OreRobotCost || s.ore < b.ClayRobotCost || s.ore < b.ObsidianRobotCostsOre || s.ore < b.GeodeRobotCostsOre ||
+		s.clay < b.ObsidianRobotCostsClay {
 		cantBuildAny := s
 		cantBuildAny.MinutePassesCollect()
 
