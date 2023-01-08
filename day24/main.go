@@ -5,6 +5,7 @@ import (
 	"container/heap"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"strings"
 )
@@ -70,7 +71,19 @@ func main() {
 	fmt.Println("start", start, "end", end)
 	fmt.Println("sim", sim)
 
-	fmt.Println("Part1", sim.WalkBFS_Priority(start, end, 500))
+	fwd := sim.WalkBFS_Priority(start, end, 500)
+	fmt.Println("Part1", fwd)
+
+	simBack := sim.RunBlizzards(fwd)
+	back := simBack.WalkBFS_Priority(end, start, 500)
+	fmt.Println("Part2 Back", back)
+
+	simAgain := sim.RunBlizzards(fwd + back)
+	again := simAgain.WalkBFS_Priority(start, end, 500)
+
+	fmt.Println("Part2 Fwd Again", again)
+
+	fmt.Println("Part2 Total", fwd+back+again)
 }
 
 func ParseStorms(lines []string) (ret simulation, start, end position) {
@@ -104,13 +117,20 @@ func (s *simulation) WalkBFS_Priority(start, end position, maxSteps int) int {
 
 	heap.Push(q, move{from: start, to: position{start.x, 0}, stepsTo: 1})
 
+	best := math.MaxInt
 	seenBefore := make(map[place]bool)
 	breadth := 0
 	for {
+		if q.Len() < 1 {
+			return best
+		}
 		m := heap.Pop(q).(move)
 		seenThis := seenBefore[place{m.to, m.stepsTo}]
 		seenBefore[place{m.to, m.stepsTo}] = true
 		if m.to == end {
+			if m.stepsTo < best {
+				best = m.stepsTo
+			}
 			maxSteps = m.stepsTo - 1
 			fmt.Println("Solution", m)
 			fmt.Println("New MaxSteps", maxSteps)
