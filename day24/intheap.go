@@ -25,18 +25,18 @@ func (h IntHeap) Less(i, j int) bool {
 	// }
 	// return h.all[i].stepsTo < h.all[j].stepsTo
 
-	// di := h.all[i].to.DistanceFrom(h.dest)
-	// dj := h.all[j].to.DistanceFrom(h.dest)
-	// if di == dj {
-	// 	//Tie breaker, prefer moves that have taken fewer steps to get there
-	// 	return h.all[i].stepsTo < h.all[j].stepsTo
-	// }
-	// return di < dj
-
-	//Try to blend distance and step count
-	di := h.all[i].to.DistanceFrom(h.dest) + h.all[i].stepsTo/10
-	dj := h.all[j].to.DistanceFrom(h.dest) + h.all[j].stepsTo/10
+	di := h.all[i].to.DistanceFrom(h.dest)
+	dj := h.all[j].to.DistanceFrom(h.dest)
+	if di == dj {
+		//Tie breaker, prefer moves that have taken fewer steps to get there
+		return h.all[i].stepsTo < h.all[j].stepsTo
+	}
 	return di < dj
+
+	// //Try to blend distance and step count
+	// di := h.all[i].to.DistanceFrom(h.dest) + h.all[i].stepsTo/10
+	// dj := h.all[j].to.DistanceFrom(h.dest) + h.all[j].stepsTo/10
+	// return di < dj
 }
 
 func (h IntHeap) Swap(i, j int) { h.all[i], h.all[j] = h.all[j], h.all[i] }

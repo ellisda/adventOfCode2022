@@ -48,8 +48,13 @@ type move struct {
 	stepsTo int
 }
 
+type place struct {
+	pos   position
+	steps int
+}
+
 func main() {
-	in := "input2.txt"
+	in := "input.txt"
 	file, _ := os.Open(in)
 	defer file.Close()
 
@@ -99,18 +104,29 @@ func (s *simulation) WalkBFS_Priority(start, end position, maxSteps int) int {
 
 	heap.Push(q, move{from: start, to: position{start.x, 0}, stepsTo: 1})
 
+	seenBefore := make(map[place]bool)
 	breadth := 0
 	for {
 		m := heap.Pop(q).(move)
+		seenThis := seenBefore[place{m.to, m.stepsTo}]
+		seenBefore[place{m.to, m.stepsTo}] = true
 		if m.to == end {
-			return m.stepsTo
+			maxSteps = m.stepsTo - 1
+			fmt.Println("Solution", m)
+			fmt.Println("New MaxSteps", maxSteps)
+			continue
+			// return m.stepsTo
+		}
+		if seenThis {
+			continue
 		}
 		if m.stepsTo > breadth {
 			breadth = m.stepsTo
 			log.Println("Evaluating Moves with NumSteps", breadth, "queue len", q.Len(), "starting with", m)
 		}
 		if m.stepsTo > maxSteps {
-			log.Fatal("Exiting. Popped a move that has already taken maxSteps", m)
+			// log.Fatal("Exiting. Popped a move that has already taken maxSteps", m)
+			continue
 		}
 
 		for _, n := range s.GetFreeSpaces(m.to, m.stepsTo+1, end) {
