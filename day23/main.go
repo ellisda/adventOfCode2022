@@ -45,6 +45,9 @@ func main() {
 	g := ParseElves(lines)
 	g10 := g.MoveN(10)
 	fmt.Println("Part1", g10.CountSparseEmpties())
+
+	fmt.Println("Part2")
+	g.MoveN(1200)
 }
 
 func ParseElves(lines []string) gang {
@@ -79,12 +82,19 @@ func (g gang) MoveN(n int) gang {
 			}
 		}
 
+		moves := 0
 		// fmt.Println("BEfore", moving)
 		for k, v := range proposals {
-			if v != POISON {
+			if v != POISON && v.loc != k {
 				v.loc = k
+				moves++
 			}
 		}
+		// if moves == 0
+		{
+			fmt.Println("At step", elapsed+1, "moves", moves)
+		}
+
 		// fmt.Println("After ", moving)
 		// fmt.Println("After Step", elapsed)
 		// moving.PrintBoard()
