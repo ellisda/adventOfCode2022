@@ -83,22 +83,33 @@ func main() {
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
-	fmt.Println(lines)
+	// fmt.Println(lines)
 
-	g, cmd := parseInput(lines)
-	fmt.Println(cmd.GetSubcommands())
+	{
+		g, cmd := parseInput(lines, false)
+		start := player{loc: pos{g.rows[0].minX, 0}, dir: RIGHT}
+		_, end := cmd.RunCommand(&g, start)
 
-	start := player{loc: pos{g.rows[0].minX, 0}, dir: RIGHT}
-	_, end := cmd.RunCommand(&g, start)
+		row, col := end.loc.y+1, end.loc.x+1
+		fmt.Println("Finished at", col, row, "facing", end.dir)
+		fmt.Println("Part1 Score", 1000*row+4*col+end.dir.Score())
+		//Remember to print row, col with "+1" (start at 1)
+	}
 
-	row, col := end.loc.y+1, end.loc.x+1
-	fmt.Println("Finished at", col, row, "facing", end.dir)
-	fmt.Println("Part1 Score", 1000*row+4*col+end.dir.Score())
+	{
+		g2, cmd := parseInput(lines, true)
+		start := player{loc: pos{g2.rows[0].minX, 0}, dir: RIGHT}
+		_, end := cmd.RunCommand(&g2, start)
 
-	//Remember to print row, col with "+1" (start at 1)
+		row, col := end.loc.y+1, end.loc.x+1
+		fmt.Println("Finished at", col, row, "facing", end.dir)
+		fmt.Println("Part1 Score", 1000*row+4*col+end.dir.Score())
+
+		//Remember to print row, col with "+1" (start at 1)
+	}
 }
 
-func parseInput(lines []string) (grid, command) {
+func parseInput(lines []string, part2 bool) (grid, command) {
 	board := lines[:len(lines)-2]
 
 	numRows := len(board)
@@ -123,6 +134,7 @@ func parseInput(lines []string) (grid, command) {
 		}
 	}
 
+	totalSpaces := 0
 	g.rows = make([]rowDescr, numRows)
 	for y := 0; y < numRows; y++ {
 		rd := rowDescr{minX: math.MaxInt, maxX: 0}
@@ -130,6 +142,7 @@ func parseInput(lines []string) (grid, command) {
 			if len(board[y]) > x && board[y][x] != ' ' {
 				rd.minX = min(rd.minX, x)
 				rd.maxX = max(rd.maxX, x)
+				totalSpaces++
 			}
 		}
 		g.rows[y] = rd
@@ -147,16 +160,97 @@ func parseInput(lines []string) (grid, command) {
 		g.cols[x] = cd
 	}
 
-	//Part1
-	for y := range g.rows {
-		rd := &g.rows[y]
-		rd.maxXNext = player{loc: pos{rd.minX, y}, dir: RIGHT} //same dir, but start over at MinX
-		rd.minXNext = player{loc: pos{rd.maxX, y}, dir: LEFT}
-	}
-	for x := range g.cols {
-		cd := &g.cols[x]
-		cd.maxYNext = player{loc: pos{x, cd.minY}, dir: DOWN} //same dir, but start over at MinX
-		cd.minYNext = player{loc: pos{x, cd.maxY}, dir: UP}
+	if part2 {
+		cubeHeight := int(math.Sqrt(float64(totalSpaces) / 6))
+		fmt.Println("total spaces", totalSpaces, "Cube Height", cubeHeight)
+
+		if cubeHeight != 50 {
+			panic("I only hard coded folding for the 50")
+		}
+		for y := 0; y < 50; y++ {
+			// Tile 1 MinX Left goes to Tile 4 Right
+			rd := &g.rows[y]
+			foldedRow := &g.rows[149-y]
+
+			rd.minXNext = player{loc: pos{foldedRow.minX, 149 - y}, dir: LEFT.RotateN(COUNTERCLOCKWISE, 2)}
+			//do the reverse, Left MinX from Tile4 goes Right on Tile 1
+			foldedRow.minXNext = player{loc: pos{rd.minX, y}, dir: LEFT.RotateN(CLOCKWISE, 2)}
+
+			//Tile 2 MaxR Right goes to Tile 5 left
+			rd.maxXNext = player{loc: pos{foldedRow.maxX, 149 - y}, dir: RIGHT.RotateN(COUNTERCLOCKWISE, 2)}
+			//Do the reverse, Right from Tile 5 goes Left on Tile 2
+			foldedRow.maxXNext = player{loc: pos{rd.maxX, y}, dir: RIGHT.RotateN(CLOCKWISE, 2)}
+		}
+		for y := 50; y < 100; y++ {
+
+			//Tile 3 MaxX Right goes to Tile 2 Up
+			rd := &g.rows[y]
+			maxCol := &g.cols[y+50]
+			rd.maxXNext = player{loc: pos{y + 50, maxCol.maxY}, dir: RIGHT.RotateN(COUNTERCLOCKWISE, 1)}
+
+			//do the reverse, down from tile 2 goes left tile 3
+			maxCol.maxYNext = player{loc: pos{rd.maxX, y}, dir: DOWN.RotateN(CLOCKWISE, 1)}
+
+			//Left on Tile 3 goes Down on Tile 4
+			minCol := &g.cols[y-50]
+			rd.minXNext = player{loc: pos{y - 50, minCol.minY}, dir: LEFT.RotateN(COUNTERCLOCKWISE, 1)}
+
+			//Do the reverse, going up on tile 4 goes right on tile 3
+			minCol.minYNext = player{loc: pos{rd.minX, y}, dir: UP.RotateN(CLOCKWISE, 1)}
+		}
+		// Tiless 4 and 5 are already MinX/MaxX mapped
+
+		for y := 150; y < 199; y++ {
+			// Tile 6 MaxX Right goes to Tile 5 Up
+			rd := &g.rows[y]
+			maxCol := &g.cols[y-100]
+			rd.maxXNext = player{loc: pos{y - 100, maxCol.maxY}, dir: RIGHT.RotateN(COUNTERCLOCKWISE, 1)}
+
+			// do the reverse, down from tile 5 goes left on tile 6
+			maxCol.maxYNext = player{loc: pos{rd.maxX, y}, dir: DOWN.RotateN(CLOCKWISE, 1)}
+
+			//Left on Tile 6 goes Down on Tile 1
+			minCol := &g.cols[y-100]
+			rd.minXNext = player{loc: pos{y - 100, minCol.minY}, dir: LEFT.RotateN(COUNTERCLOCKWISE, 1)}
+
+			//Do the reverse, going up on tile 4 goes right on tile 3
+			minCol.minYNext = player{loc: pos{rd.minX, y}, dir: UP.RotateN(CLOCKWISE, 1)}
+		}
+
+		for x := 50; x < 99; x++ {
+			//Tile1 UP MinY turns into Tile 6 Right
+			cd := &g.cols[x]
+
+			maxRow := &g.rows[x+100]
+			cd.minYNext = player{loc: pos{maxRow.minX, x + 100}, dir: UP.RotateN(COUNTERCLOCKWISE, 3)}
+
+			//do the reverse, Tile 6 left MinX turns into Tile 1 Down
+			maxRow.maxXNext = player{loc: pos{x, cd.minY}, dir: LEFT.RotateN(CLOCKWISE, 3)}
+
+		}
+
+		for x := 0; x < 50; x++ {
+			//Tile 6 down MaxY turns into Tile 2 down
+			cd := &g.cols[x]
+
+			colMap := &g.cols[x+100]
+			cd.maxYNext = player{loc: pos{x + 100, colMap.minY}, dir: DOWN}
+			//Reverse - Tile2 Up turns into Tile 6 up
+			cd.minYNext = player{loc: pos{x, colMap.maxY}, dir: UP}
+
+		}
+
+	} else {
+		for y := range g.rows {
+			rd := &g.rows[y]
+			rd.maxXNext = player{loc: pos{rd.minX, y}, dir: RIGHT} //same dir, but start over at MinX
+			rd.minXNext = player{loc: pos{rd.maxX, y}, dir: LEFT}
+		}
+		for x := range g.cols {
+			cd := &g.cols[x]
+			cd.maxYNext = player{loc: pos{x, cd.minY}, dir: DOWN} //same dir, but start over at MinX
+			cd.minYNext = player{loc: pos{x, cd.maxY}, dir: UP}
+		}
 	}
 
 	cmd := command(lines[len(lines)-1])
@@ -244,6 +338,13 @@ func parseSubcommand(str string) subcommand {
 	return ret
 }
 
+func (h heading) RotateN(dir rotation, n int) heading {
+	ret := h
+	for i := 0; i < n; i++ {
+		ret = ret.Rotate(dir)
+	}
+	return ret
+}
 func (h heading) Rotate(dir rotation) heading {
 	switch dir {
 	case NOROTATION:
