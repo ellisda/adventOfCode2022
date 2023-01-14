@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"log"
 	"math"
@@ -22,6 +23,9 @@ const (
 	COUNTERCLOCKWISE
 	NOROTATION
 )
+
+//go:embed input.txt
+var INPUT string
 
 type pos struct {
 	x int
@@ -70,6 +74,14 @@ type subcommand struct {
 }
 type rotation int8
 
+type translateFunc func(x, y int, f heading) (int, int, heading)
+
+type region struct {
+	xmin, xmax int
+	ymin, ymax int
+	translate  translateFunc
+}
+
 func main() {
 
 	in := "input.txt"
@@ -103,7 +115,7 @@ func main() {
 
 		row, col := end.loc.y+1, end.loc.x+1
 		fmt.Println("Finished at", col, row, "facing", end.dir)
-		fmt.Println("Part1 Score", 1000*row+4*col+end.dir.Score())
+		fmt.Println("Part2 Score", 1000*row+4*col+end.dir.Score())
 
 		//Remember to print row, col with "+1" (start at 1)
 	}
@@ -167,79 +179,56 @@ func parseInput(lines []string, part2 bool) (grid, command) {
 		if cubeHeight != 50 {
 			panic("I only hard coded folding for the 50")
 		}
-		for y := 0; y < 50; y++ {
-			// Tile 1 MinX Left goes to Tile 4 Right
-			rd := &g.rows[y]
-			foldedRow := &g.rows[149-y]
 
-			rd.minXNext = player{loc: pos{foldedRow.minX, 149 - y}, dir: LEFT.RotateN(COUNTERCLOCKWISE, 2)}
-			//do the reverse, Left MinX from Tile4 goes Right on Tile 1
-			foldedRow.minXNext = player{loc: pos{rd.minX, y}, dir: LEFT.RotateN(CLOCKWISE, 2)}
+		r1 := &region{xmin: 50, xmax: 99, ymin: 0, ymax: 49}
+		r2 := &region{xmin: 100, xmax: 149, ymin: 0, ymax: 49}
+		r3 := &region{xmin: 50, xmax: 99, ymin: 50, ymax: 99}
+		r4 := &region{xmin: 0, xmax: 49, ymin: 100, ymax: 149}
+		r5 := &region{xmin: 50, xmax: 99, ymin: 100, ymax: 149}
+		r6 := &region{xmin: 0, xmax: 49, ymin: 150, ymax: 199}
 
-			//Tile 2 MaxR Right goes to Tile 5 left
-			rd.maxXNext = player{loc: pos{foldedRow.maxX, 149 - y}, dir: RIGHT.RotateN(COUNTERCLOCKWISE, 2)}
-			//Do the reverse, Right from Tile 5 goes Left on Tile 2
-			foldedRow.maxXNext = player{loc: pos{rd.maxX, y}, dir: RIGHT.RotateN(CLOCKWISE, 2)}
+		for y := r1.ymin; y <= r1.ymax; y++ {
+			dy := y - r1.ymin
+			// R1 going LEFT connects to R4 going RIGHT
+			g.rows[y].minXNext = player{dir: RIGHT, loc: pos{r4.xmin, r4.ymax - dy}}
+			g.rows[y].maxXNext = player{dir: LEFT, loc: pos{r5.xmax, r5.ymax - dy}}
 		}
-		for y := 50; y < 100; y++ {
-
-			//Tile 3 MaxX Right goes to Tile 2 Up
-			rd := &g.rows[y]
-			maxCol := &g.cols[y+50]
-			rd.maxXNext = player{loc: pos{y + 50, maxCol.maxY}, dir: RIGHT.RotateN(COUNTERCLOCKWISE, 1)}
-
-			//do the reverse, down from tile 2 goes left tile 3
-			maxCol.maxYNext = player{loc: pos{rd.maxX, y}, dir: DOWN.RotateN(CLOCKWISE, 1)}
-
-			//Left on Tile 3 goes Down on Tile 4
-			minCol := &g.cols[y-50]
-			rd.minXNext = player{loc: pos{y - 50, minCol.minY}, dir: LEFT.RotateN(COUNTERCLOCKWISE, 1)}
-
-			//Do the reverse, going up on tile 4 goes right on tile 3
-			minCol.minYNext = player{loc: pos{rd.minX, y}, dir: UP.RotateN(CLOCKWISE, 1)}
+		for y := r3.ymin; y <= r3.ymax; y++ {
+			dy := y - r3.ymin
+			g.rows[y].minXNext = player{dir: DOWN, loc: pos{r4.xmin + dy, r4.ymin}}
+			g.rows[y].maxXNext = player{dir: UP, loc: pos{r2.xmin + dy, r2.ymax}}
 		}
 		// Tiless 4 and 5 are already MinX/MaxX mapped
 
-		for y := 150; y < 199; y++ {
-			// Tile 6 MaxX Right goes to Tile 5 Up
-			rd := &g.rows[y]
-			maxCol := &g.cols[y-100]
-			rd.maxXNext = player{loc: pos{y - 100, maxCol.maxY}, dir: RIGHT.RotateN(COUNTERCLOCKWISE, 1)}
-
-			// do the reverse, down from tile 5 goes left on tile 6
-			maxCol.maxYNext = player{loc: pos{rd.maxX, y}, dir: DOWN.RotateN(CLOCKWISE, 1)}
-
-			//Left on Tile 6 goes Down on Tile 1
-			minCol := &g.cols[y-100]
-			rd.minXNext = player{loc: pos{y - 100, minCol.minY}, dir: LEFT.RotateN(COUNTERCLOCKWISE, 1)}
-
-			//Do the reverse, going up on tile 4 goes right on tile 3
-			minCol.minYNext = player{loc: pos{rd.minX, y}, dir: UP.RotateN(CLOCKWISE, 1)}
+		for y := r4.ymin; y <= r4.ymax; y++ {
+			dy := y - r4.ymin
+			g.rows[y].minXNext = player{dir: RIGHT, loc: pos{r1.xmin, r1.ymax - dy}}
+			g.rows[y].maxXNext = player{dir: LEFT, loc: pos{r2.xmax, r2.ymax - dy}}
 		}
 
-		for x := 50; x < 99; x++ {
-			//Tile1 UP MinY turns into Tile 6 Right
-			cd := &g.cols[x]
-
-			maxRow := &g.rows[x+100]
-			cd.minYNext = player{loc: pos{maxRow.minX, x + 100}, dir: UP.RotateN(COUNTERCLOCKWISE, 3)}
-
-			//do the reverse, Tile 6 left MinX turns into Tile 1 Down
-			maxRow.maxXNext = player{loc: pos{x, cd.minY}, dir: LEFT.RotateN(CLOCKWISE, 3)}
-
+		for y := r6.ymin; y <= r6.ymax; y++ {
+			dy := y - r6.ymin
+			g.rows[y].minXNext = player{dir: DOWN, loc: pos{r1.xmin + dy, r1.ymin}}
+			g.rows[y].maxXNext = player{dir: UP, loc: pos{r5.xmin + dy, r5.ymax}}
 		}
 
-		for x := 0; x < 50; x++ {
-			//Tile 6 down MaxY turns into Tile 2 down
-			cd := &g.cols[x]
-
-			colMap := &g.cols[x+100]
-			cd.maxYNext = player{loc: pos{x + 100, colMap.minY}, dir: DOWN}
-			//Reverse - Tile2 Up turns into Tile 6 up
-			cd.minYNext = player{loc: pos{x, colMap.maxY}, dir: UP}
-
+		for x := r4.xmin; x <= r4.xmax; x++ {
+			dx := x - r4.xmin
+			g.cols[x].minYNext = player{dir: RIGHT, loc: pos{r3.xmin, r3.ymin + dx}}
+			g.cols[x].maxYNext = player{dir: DOWN, loc: pos{r2.xmin + dx, r2.ymin}}
 		}
 
+		for x := r1.xmin; x <= r1.xmax; x++ {
+			dx := x - r1.xmin
+			g.cols[x].minYNext = player{dir: RIGHT, loc: pos{r6.xmin, r6.ymin + dx}}
+			g.cols[x].maxYNext = player{dir: LEFT, loc: pos{r6.xmax, r6.ymin + dx}}
+		}
+
+		for x := r2.xmin; x <= r2.xmax; x++ {
+			dx := x - r2.xmin
+			g.cols[x].minYNext = player{dir: UP, loc: pos{r6.xmin + dx, r6.ymax}}
+			g.cols[x].maxYNext = player{dir: LEFT, loc: pos{r3.xmax, r3.ymin + dx}}
+		}
 	} else {
 		for y := range g.rows {
 			rd := &g.rows[y]
