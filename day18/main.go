@@ -134,12 +134,37 @@ func (s surface) OutwardFacingSurfaces() int {
 	return ret
 }
 
+func (s surface) visit(p pos, water map[pos]bool, min, max pos) {
+	if _, ok := water[p]; ok {
+		return
+	}
+
+	water[p] = true
+
+	for _, neighbor := range p.Neighbors() {
+		if inBounds(neighbor, min, max) && s.IsEmpty(neighbor) {
+			s.visit(neighbor, water, min, max)
+		}
+	}
+}
+
+func inBounds(p, min, max pos) bool {
+	out := p.x < min.x || p.x > max.x ||
+		p.y < min.y || p.y > max.y ||
+		p.z < min.z || p.z > max.z
+
+	return !out
+}
+
 func FillWithWater(s surface) map[pos]bool {
 	p0, p1 := s.BoundingBox()
+	ret := make(map[pos]bool)
+
+	//alt - visit all via  dfs
+	s.visit(p0, ret, p0, p1)
 
 	// debug := pos{2, 2, 1}
 
-	ret := make(map[pos]bool)
 	for x := p0.x; x <= p1.x; x++ {
 		for y := p0.y; y <= p1.y; y++ {
 
