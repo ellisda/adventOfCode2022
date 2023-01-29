@@ -198,10 +198,14 @@ func (s *simulation) GetFreeSpaces(player position, elapsed int, finalDest posit
 }
 
 // Runs the initial blzzard simulation through to n number of steps and returns a grid
-func (s *simulation) RunBlizzards(elapsed int) simulation {
+func (s *simulation) RunBlizzards(elapsed int) *simulation {
 	ret := s.Copy()
-	for i := range ret {
-		b := &(ret[i])
+	return s.RunBlizzardsFast(&ret, elapsed)
+}
+
+func (s *simulation) RunBlizzardsFast(ret *simulation, elapsed int) *simulation {
+	for i := range *ret {
+		b := &((*ret)[i])
 		switch b.dir {
 		case Down:
 			b.start.y = (b.start.y + elapsed) % *b.Y_len

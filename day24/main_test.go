@@ -41,7 +41,7 @@ func TestRunBlizzards(t *testing.T) {
 		blizzardStart{position{0, 4}, Up, &xLen, &yLen},
 	}
 
-	t4 := sim.RunBlizzards(4)
+	t4 := *sim.RunBlizzards(4)
 	assert.Equal(t, position{4, 0}, t4[0].start)
 	assert.Equal(t, position{0, 0}, t4[1].start)
 	assert.Equal(t, position{0, 4}, t4[2].start)
@@ -51,7 +51,7 @@ func TestRunBlizzards(t *testing.T) {
 	assert.Equal(t, false, t4.IsStorming(position{1, 1}))
 
 	//Wrap Around
-	tWrapped := sim.RunBlizzards(5)
+	tWrapped := *sim.RunBlizzards(5)
 	assert.Equal(t, position{0, 0}, tWrapped[0].start)
 	assert.Equal(t, position{4, 0}, tWrapped[1].start)
 	assert.Equal(t, position{0, 0}, tWrapped[2].start)
