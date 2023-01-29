@@ -125,6 +125,7 @@ func (s *simulation) WalkBFS_Priority(start, end position, maxSteps int) int {
 
 	heap.Push(q, move{from: start, to: position{start.x, 0}, stepsTo: 1})
 
+	copy := s.Copy()
 	breadth := 0
 	for {
 		m := heap.Pop(q).(move)
@@ -139,7 +140,7 @@ func (s *simulation) WalkBFS_Priority(start, end position, maxSteps int) int {
 			log.Fatal("Exiting. Popped a move that has already taken maxSteps", m)
 		}
 
-		for _, n := range s.GetFreeSpaces(m.to, m.stepsTo+1, end) {
+		for _, n := range s.GetFreeSpaces(copy, m.to, m.stepsTo+1, end) {
 			//Walk each
 			// do we ever stop if we've been to this position 30+ times already?
 			// A: no, we just priorize moves that get us closer to the target
@@ -169,12 +170,12 @@ func (s *simulation) WalkBFS_Priority(start, end position, maxSteps int) int {
 // 	return -1
 // }
 
-func (s *simulation) GetFreeSpaces(player position, elapsed int, finalDest position) []position {
+func (s *simulation) GetFreeSpaces(copy *simulation, player position, elapsed int, finalDest position) []position {
 	// MEMORY INTENSIVE
 	// DESIGN REVIEW - We don't really need to generate a whole grid, to look at 8 positions.
 	// 				   instead, we just run each storm movement and check each to see if they are
 	//                 present in the 8 positions
-	today := s.RunBlizzards(elapsed)
+	today := s.RunBlizzardsFast(copy, elapsed)
 
 	ret := make([]position, 0, 5)
 
@@ -200,27 +201,28 @@ func (s *simulation) GetFreeSpaces(player position, elapsed int, finalDest posit
 // Runs the initial blzzard simulation through to n number of steps and returns a grid
 func (s *simulation) RunBlizzards(elapsed int) *simulation {
 	ret := s.Copy()
-	return s.RunBlizzardsFast(&ret, elapsed)
+	return s.RunBlizzardsFast(ret, elapsed)
 }
 
 func (s *simulation) RunBlizzardsFast(ret *simulation, elapsed int) *simulation {
-	for i := range *ret {
-		b := &((*ret)[i])
+	for i, b := range *s {
+		x := &((*ret)[i])
+		*x = b
 		switch b.dir {
 		case Down:
-			b.start.y = (b.start.y + elapsed) % *b.Y_len
+			x.start.y = (b.start.y + elapsed) % *b.Y_len
 		case Up:
-			b.start.y = (b.start.y - elapsed) % *b.Y_len
-			if b.start.y < 0 {
-				b.start.y += *b.Y_len
+			x.start.y = (b.start.y - elapsed) % *b.Y_len
+			if x.start.y < 0 {
+				x.start.y += *b.Y_len
 			}
 
 		case Right:
-			b.start.x = (b.start.x + elapsed) % *b.X_len
+			x.start.x = (b.start.x + elapsed) % *b.X_len
 		case Left:
-			b.start.x = (b.start.x - elapsed) % *b.X_len
-			if b.start.x < 0 {
-				b.start.x += *b.X_len
+			x.start.x = (b.start.x - elapsed) % *b.X_len
+			if x.start.x < 0 {
+				x.start.x += *b.X_len
 			}
 		}
 
@@ -229,10 +231,10 @@ func (s *simulation) RunBlizzardsFast(ret *simulation, elapsed int) *simulation 
 	return ret
 }
 
-func (s *simulation) Copy() simulation {
+func (s *simulation) Copy() *simulation {
 	ret := make(simulation, len(*s))
 	copy(ret, *s)
-	return ret
+	return &ret
 }
 
 func (s *simulation) IsStorming(p position) bool {
