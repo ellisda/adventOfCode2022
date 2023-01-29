@@ -125,6 +125,7 @@ func (s *simulation) WalkBFS_Priority(start, end position, maxSteps int) int {
 
 	heap.Push(q, move{from: start, to: position{start.x, 0}, stepsTo: 1})
 
+	visited := make(map[position]int)
 	copy := s.Copy()
 	breadth := 0
 	for {
@@ -139,6 +140,10 @@ func (s *simulation) WalkBFS_Priority(start, end position, maxSteps int) int {
 		if m.stepsTo > maxSteps {
 			log.Fatal("Exiting. Popped a move that has already taken maxSteps", m)
 		}
+		if prev, ok := visited[m.to]; ok && m.stepsTo == prev {
+			continue //we've been here at this time (i.e. time is same as blizzardState), no need go forward again
+		}
+		visited[m.to] = m.stepsTo
 
 		for _, n := range s.GetFreeSpaces(copy, m.to, m.stepsTo+1, end) {
 			//Walk each

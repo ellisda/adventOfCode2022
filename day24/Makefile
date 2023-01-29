@@ -18,7 +18,7 @@ check:
 build: dep check test main.go
 	go build -o ${BINARY_NAME} ./...
 
-run:
+run: build
 	./${BINARY_NAME}
 
 profile: build
