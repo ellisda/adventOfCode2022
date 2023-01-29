@@ -3,10 +3,13 @@ package main
 import (
 	"bufio"
 	"container/heap"
+	"flag"
 	"fmt"
 	"log"
 	"os"
+	"runtime/pprof"
 	"strings"
+	"time"
 )
 
 type blizzard int8
@@ -48,8 +51,31 @@ type move struct {
 	stepsTo int
 }
 
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+
 func main() {
-	in := "input2.txt"
+	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+
+		t0 := time.Now()
+
+		go func() {
+			for {
+				if time.Since(t0) > 10*time.Second {
+					pprof.StopCPUProfile()
+					panic("timeout")
+				}
+				time.Sleep(50 * time.Millisecond)
+			}
+		}()
+	}
+
+	in := "input.txt"
 	file, _ := os.Open(in)
 	defer file.Close()
 
